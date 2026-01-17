@@ -115,8 +115,10 @@ class IssueController extends AbstractController
         // Get related events from Parquet
         $projectId = $project->getPublicId()->toRfc4122();
         $events = $this->parquetReader->getEventsByFingerprint(
-            $projectId,
             $issue->getFingerprint(),
+            null,
+            $projectId,
+            null,
             20
         );
 

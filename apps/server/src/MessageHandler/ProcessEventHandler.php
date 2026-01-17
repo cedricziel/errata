@@ -45,8 +45,11 @@ class ProcessEventHandler
             return;
         }
 
+        // Get organization ID for Hive partitioning
+        $organizationId = $project->getOrganization()->getPublicId()?->toRfc4122();
+
         // Prepare the event data
-        $eventData = $this->prepareEventData($message->eventData, $message->projectId, $message->environment);
+        $eventData = $this->prepareEventData($message->eventData, $organizationId, $message->projectId, $message->environment);
 
         // Generate fingerprint
         $fingerprint = $this->fingerprintService->generateFingerprint($eventData);
@@ -79,13 +82,14 @@ class ProcessEventHandler
      *
      * @return array<string, mixed>
      */
-    private function prepareEventData(array $data, string $projectId, string $environment): array
+    private function prepareEventData(array $data, ?string $organizationId, string $projectId, string $environment): array
     {
         $now = (int) (microtime(true) * 1000);
 
         return array_merge($data, [
             'event_id' => Uuid::v7()->toRfc4122(),
             'timestamp' => $data['timestamp'] ?? $now,
+            'organization_id' => $organizationId,
             'project_id' => $projectId,
             'environment' => $data['environment'] ?? $environment,
         ]);

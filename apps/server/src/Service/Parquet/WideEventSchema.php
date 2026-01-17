@@ -36,6 +36,7 @@ class WideEventSchema
             // Core fields (always present)
             FlatColumn::string('event_id'),
             FlatColumn::int64('timestamp'),
+            FlatColumn::string('organization_id'),
             FlatColumn::string('project_id'),
             FlatColumn::string('event_type'),
             FlatColumn::string('fingerprint'),
@@ -172,6 +173,7 @@ class WideEventSchema
             // Core fields
             'event_id' => null,
             'timestamp' => null,
+            'organization_id' => null,
             'project_id' => null,
             'event_type' => null,
             'fingerprint' => null,

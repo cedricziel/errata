@@ -22,19 +22,21 @@ class ParquetReaderService
     }
 
     /**
-     * Read all events for a project within a date range.
+     * Read events with Hive-style partition filtering.
      *
-     * @param array<string, mixed> $filters
+     * @param array<string, mixed> $filters Additional filters to apply to event data
      *
      * @return \Generator<array<string, mixed>>
      */
     public function readEvents(
-        string $projectId,
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
         array $filters = [],
     ): \Generator {
-        $files = $this->findParquetFiles($projectId, $from, $to);
+        $files = $this->findParquetFiles($organizationId, $projectId, $eventType, $from, $to);
 
         foreach ($files as $file) {
             yield from $this->readFile($file, $filters);
@@ -76,19 +78,21 @@ class ParquetReaderService
     }
 
     /**
-     * Count events for a project.
+     * Count events with Hive-style partition filtering.
      *
      * @param array<string, mixed> $filters
      */
     public function countEvents(
-        string $projectId,
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
         array $filters = [],
     ): int {
         $count = 0;
 
-        foreach ($this->readEvents($projectId, $from, $to, $filters) as $event) {
+        foreach ($this->readEvents($organizationId, $projectId, $eventType, $from, $to, $filters) as $event) {
             ++$count;
         }
 
@@ -96,12 +100,14 @@ class ParquetReaderService
     }
 
     /**
-     * Get event statistics for a project.
+     * Get event statistics with Hive-style partition filtering.
      *
      * @return array<string, mixed>
      */
     public function getEventStats(
-        string $projectId,
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
     ): array {
@@ -112,7 +118,7 @@ class ParquetReaderService
             'by_day' => [],
         ];
 
-        foreach ($this->readEvents($projectId, $from, $to) as $event) {
+        foreach ($this->readEvents($organizationId, $projectId, $eventType, $from, $to) as $event) {
             ++$stats['total'];
 
             // Count by type
@@ -143,8 +149,10 @@ class ParquetReaderService
      * @return array<array<string, mixed>>
      */
     public function getEventsByFingerprint(
-        string $projectId,
         string $fingerprint,
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
         int $limit = 50,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
@@ -152,7 +160,7 @@ class ParquetReaderService
         $events = [];
         $filters = ['fingerprint' => $fingerprint];
 
-        foreach ($this->readEvents($projectId, $from, $to, $filters) as $event) {
+        foreach ($this->readEvents($organizationId, $projectId, $eventType, $from, $to, $filters) as $event) {
             $events[] = $event;
 
             if (count($events) >= $limit) {
@@ -167,15 +175,146 @@ class ParquetReaderService
     }
 
     /**
-     * Find Parquet files for a project within a date range.
+     * Find Parquet files with Hive-style partition filtering.
      *
      * @return array<string>
      */
     public function findParquetFiles(
-        string $projectId,
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
     ): array {
+        // Build the base path with partition pruning
+        $basePath = $this->storagePath;
+
+        if (null !== $organizationId) {
+            $basePath .= '/organization_id='.$organizationId;
+        }
+
+        if (null !== $projectId) {
+            if (null === $organizationId) {
+                // If no org specified but project is, we need to search all orgs
+                $basePath = $this->storagePath;
+            } else {
+                $basePath .= '/project_id='.$projectId;
+            }
+        }
+
+        if (null !== $eventType && null !== $organizationId && null !== $projectId) {
+            $basePath .= '/event_type='.$eventType;
+        }
+
+        if (!is_dir($basePath)) {
+            // Try legacy path format for backward compatibility
+            return $this->findLegacyParquetFiles($projectId, $from, $to);
+        }
+
+        $finder = new Finder();
+        $finder->files()
+            ->in($basePath)
+            ->name('*.parquet')
+            ->sortByName();
+
+        // Filter by partition values
+        $finder->filter(function (\SplFileInfo $file) use ($organizationId, $projectId, $eventType, $from, $to) {
+            $path = $file->getPathname();
+            $partitions = $this->extractPartitionValues($path);
+
+            // Filter by organization
+            if (null !== $organizationId && ($partitions['organization_id'] ?? null) !== $organizationId) {
+                return false;
+            }
+
+            // Filter by project
+            if (null !== $projectId && ($partitions['project_id'] ?? null) !== $projectId) {
+                return false;
+            }
+
+            // Filter by event type
+            if (null !== $eventType && ($partitions['event_type'] ?? null) !== $eventType) {
+                return false;
+            }
+
+            // Filter by date range
+            if ((null !== $from || null !== $to) && isset($partitions['dt'])) {
+                return $this->dateMatchesRange($partitions['dt'], $from, $to);
+            }
+
+            return true;
+        });
+
+        $files = [];
+        foreach ($finder as $file) {
+            $files[] = $file->getPathname();
+        }
+
+        return $files;
+    }
+
+    /**
+     * Extract partition key-value pairs from a Hive-style path.
+     *
+     * @return array<string, string>
+     */
+    public function extractPartitionValues(string $path): array
+    {
+        preg_match_all('/(\w+)=([^\/]+)/', $path, $matches, PREG_SET_ORDER);
+
+        $values = [];
+        foreach ($matches as $match) {
+            $values[$match[1]] = $match[2];
+        }
+
+        return $values;
+    }
+
+    /**
+     * Check if a date string matches the given range.
+     */
+    private function dateMatchesRange(
+        string $dateStr,
+        ?\DateTimeInterface $from,
+        ?\DateTimeInterface $to,
+    ): bool {
+        try {
+            $fileDate = new \DateTimeImmutable($dateStr);
+        } catch (\Exception) {
+            return true; // If we can't parse, include the file
+        }
+
+        if (null !== $from) {
+            $fromDate = \DateTimeImmutable::createFromInterface($from)->setTime(0, 0, 0);
+            if ($fileDate < $fromDate) {
+                return false;
+            }
+        }
+
+        if (null !== $to) {
+            $toDate = \DateTimeImmutable::createFromInterface($to)->setTime(23, 59, 59);
+            if ($fileDate > $toDate) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Find Parquet files using legacy path format (backward compatibility).
+     *
+     * @return array<string>
+     */
+    private function findLegacyParquetFiles(
+        ?string $projectId,
+        ?\DateTimeInterface $from = null,
+        ?\DateTimeInterface $to = null,
+    ): array {
+        if (null === $projectId) {
+            return [];
+        }
+
         $basePath = $this->storagePath.'/'.$projectId;
 
         if (!is_dir($basePath)) {
@@ -188,10 +327,10 @@ class ParquetReaderService
             ->name('*.parquet')
             ->sortByName();
 
-        // Filter by date if specified
+        // Filter by date if specified (legacy path format: /project_id/YYYY/MM/DD/)
         if (null !== $from || null !== $to) {
             $finder->filter(function (\SplFileInfo $file) use ($from, $to) {
-                return $this->fileMatchesDateRange($file->getPathname(), $from, $to);
+                return $this->legacyFileMatchesDateRange($file->getPathname(), $from, $to);
             });
         }
 
@@ -204,9 +343,9 @@ class ParquetReaderService
     }
 
     /**
-     * Check if a file's path matches the date range.
+     * Check if a file's legacy path matches the date range.
      */
-    private function fileMatchesDateRange(
+    private function legacyFileMatchesDateRange(
         string $filePath,
         ?\DateTimeInterface $from,
         ?\DateTimeInterface $to,

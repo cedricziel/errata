@@ -86,10 +86,12 @@ class ParquetWriterService
 
         // Determine the path based on the first event
         $firstEvent = $events[0];
+        $organizationId = $firstEvent['organization_id'] ?? 'unknown';
         $projectId = $firstEvent['project_id'] ?? 'unknown';
+        $eventType = $firstEvent['event_type'] ?? 'unknown';
         $timestamp = $firstEvent['timestamp'] ?? (int) (microtime(true) * 1000);
 
-        $filePath = $this->getFilePath($projectId, $timestamp);
+        $filePath = $this->getFilePath($organizationId, $projectId, $eventType, $timestamp);
         $this->ensureDirectoryExists(dirname($filePath));
 
         $writer = new Writer();
@@ -123,31 +125,38 @@ class ParquetWriterService
     }
 
     /**
-     * Get the file path for a given project and timestamp.
+     * Get the file path for a given organization, project, event type, and timestamp using Hive-style partitioning.
+     *
+     * Path format: organization_id={org}/project_id={proj}/event_type={type}/dt={YYYY-MM-DD}/events_{HHmmss}_{UUID}.parquet
      */
-    public function getFilePath(string $projectId, int $timestampMs): string
+    public function getFilePath(string $organizationId, string $projectId, string $eventType, int $timestampMs): string
     {
         $date = new \DateTimeImmutable('@'.(int) ($timestampMs / 1000));
         $batchId = Uuid::v7();
 
         return sprintf(
-            '%s/%s/%s/%s/%s/events_%s_%s.parquet',
+            '%s/organization_id=%s/project_id=%s/event_type=%s/dt=%s/events_%s_%s.parquet',
             $this->storagePath,
+            $organizationId,
             $projectId,
-            $date->format('Y'),
-            $date->format('m'),
-            $date->format('d'),
+            $eventType,
+            $date->format('Y-m-d'),
             $date->format('His'),
             $batchId
         );
     }
 
     /**
-     * Get the storage directory for a project.
+     * Get the storage directory for a project within an organization.
      */
-    public function getProjectStoragePath(string $projectId): string
+    public function getProjectStoragePath(string $organizationId, string $projectId): string
     {
-        return $this->storagePath.'/'.$projectId;
+        return sprintf(
+            '%s/organization_id=%s/project_id=%s',
+            $this->storagePath,
+            $organizationId,
+            $projectId
+        );
     }
 
     /**
