@@ -23,7 +23,3 @@
 /.php-cs-fixer.php
 /.php-cs-fixer.cache
 ###< friendsofphp/php-cs-fixer ###
-
-###> symfony/property-info ###
-/config/reference.php
-###< symfony/property-info ###
