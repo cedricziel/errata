@@ -6,6 +6,7 @@ namespace App\Tests\Integration\Api\Otel;
 
 use App\Message\ProcessEvent;
 use App\Tests\Integration\AbstractIntegrationTestCase;
+use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceRequest;
 use Zenstruck\Messenger\Test\InteractsWithMessenger;
 
 class TracesControllerTest extends AbstractIntegrationTestCase
@@ -67,21 +68,30 @@ class TracesControllerTest extends AbstractIntegrationTestCase
         $this->assertSame('bad_request', $response['error']);
     }
 
-    public function testProtobufContentTypeReturns415(): void
+    public function testProtobufContentTypeReturns200(): void
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
         $apiKeyData = $this->createTestApiKey($project);
 
+        $request = new ExportTraceServiceRequest();
+        $request->mergeFromJsonString(json_encode($this->createValidOtlpTracePayload()));
+        $protobufData = $request->serializeToString();
+
         $this->client->request('POST', '/v1/traces', [], [], [
             'CONTENT_TYPE' => 'application/x-protobuf',
             'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], '');
+        ], $protobufData);
 
-        $this->assertResponseStatusCodeSame(415);
+        $this->assertResponseStatusCodeSame(200);
 
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('unsupported_media_type', $response['error']);
+        $this->transport('async')
+            ->queue()
+            ->assertContains(ProcessEvent::class, 1);
+
+        $messages = $this->transport('async')->queue()->messages(ProcessEvent::class);
+        $this->assertSame('span', $messages[0]->eventData['event_type']);
+        $this->assertSame('5b8efff798038103d269b633813fc60c', $messages[0]->eventData['trace_id']);
     }
 
     public function testDispatchesProcessEventMessage(): void

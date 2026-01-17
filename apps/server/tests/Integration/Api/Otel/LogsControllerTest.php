@@ -6,6 +6,7 @@ namespace App\Tests\Integration\Api\Otel;
 
 use App\Message\ProcessEvent;
 use App\Tests\Integration\AbstractIntegrationTestCase;
+use Opentelemetry\Proto\Collector\Logs\V1\ExportLogsServiceRequest;
 use Zenstruck\Messenger\Test\InteractsWithMessenger;
 
 class LogsControllerTest extends AbstractIntegrationTestCase
@@ -54,18 +55,30 @@ class LogsControllerTest extends AbstractIntegrationTestCase
         $this->assertResponseStatusCodeSame(400);
     }
 
-    public function testProtobufContentTypeReturns415(): void
+    public function testProtobufContentTypeReturns200(): void
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
         $apiKeyData = $this->createTestApiKey($project);
 
+        $request = new ExportLogsServiceRequest();
+        $request->mergeFromJsonString(json_encode($this->createValidOtlpLogPayload()));
+        $protobufData = $request->serializeToString();
+
         $this->client->request('POST', '/v1/logs', [], [], [
             'CONTENT_TYPE' => 'application/x-protobuf',
             'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], '');
+        ], $protobufData);
 
-        $this->assertResponseStatusCodeSame(415);
+        $this->assertResponseStatusCodeSame(200);
+
+        $this->transport('async')
+            ->queue()
+            ->assertContains(ProcessEvent::class, 1);
+
+        $messages = $this->transport('async')->queue()->messages(ProcessEvent::class);
+        $this->assertSame('log', $messages[0]->eventData['event_type']);
+        $this->assertSame('Test log message', $messages[0]->eventData['message']);
     }
 
     public function testDispatchesProcessEventMessage(): void

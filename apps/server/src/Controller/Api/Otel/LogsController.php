@@ -33,15 +33,6 @@ class LogsController extends AbstractController
     #[Route('/logs', name: 'otel_logs', methods: ['POST'])]
     public function ingest(Request $request): JsonResponse
     {
-        $contentType = $request->headers->get('Content-Type', '');
-
-        if (str_contains($contentType, 'application/x-protobuf')) {
-            return new JsonResponse([
-                'error' => 'unsupported_media_type',
-                'message' => 'Protobuf format is not supported. Please use application/json.',
-            ], Response::HTTP_UNSUPPORTED_MEDIA_TYPE);
-        }
-
         $project = ApiKeyAuthenticator::getProject($request);
         $apiKey = ApiKeyAuthenticator::getApiKey($request);
 
@@ -53,16 +44,29 @@ class LogsController extends AbstractController
         }
 
         $content = $request->getContent();
-        if ('' === $content || !$this->isValidJson($content)) {
+        if ('' === $content) {
             return new JsonResponse([
                 'error' => 'bad_request',
-                'message' => 'Invalid JSON payload',
+                'message' => 'Empty payload',
             ], Response::HTTP_BAD_REQUEST);
         }
 
+        $contentType = $request->headers->get('Content-Type', '');
+        $isProtobuf = str_contains($contentType, 'application/x-protobuf');
+
         try {
             $logsRequest = new ExportLogsServiceRequest();
-            $logsRequest->mergeFromJsonString($content);
+            if ($isProtobuf) {
+                $logsRequest->mergeFromString($content);
+            } else {
+                if (!$this->isValidJson($content)) {
+                    return new JsonResponse([
+                        'error' => 'bad_request',
+                        'message' => 'Invalid JSON payload',
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+                $logsRequest->mergeFromJsonString($content);
+            }
         } catch (\Throwable $e) {
             return new JsonResponse([
                 'error' => 'bad_request',
