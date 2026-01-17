@@ -14,8 +14,9 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ProjectRepository::class)]
 #[ORM\Table(name: 'projects')]
-class Project
+class Project implements OrganizationAwareInterface
 {
+    use OrganizationAwareTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]

@@ -6,10 +6,14 @@ namespace App\Tests\Integration;
 
 use App\Entity\ApiKey;
 use App\Entity\Issue;
+use App\Entity\Organization;
+use App\Entity\OrganizationMembership;
 use App\Entity\Project;
 use App\Entity\User;
 use App\Repository\ApiKeyRepository;
 use App\Repository\IssueRepository;
+use App\Repository\OrganizationMembershipRepository;
+use App\Repository\OrganizationRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +30,8 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
     protected ProjectRepository $projectRepository;
     protected ApiKeyRepository $apiKeyRepository;
     protected IssueRepository $issueRepository;
+    protected OrganizationRepository $organizationRepository;
+    protected OrganizationMembershipRepository $organizationMembershipRepository;
 
     protected function setUp(): void
     {
@@ -49,6 +55,14 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
         $issueRepository = static::getContainer()->get(IssueRepository::class);
         $this->issueRepository = $issueRepository;
 
+        /** @var OrganizationRepository $organizationRepository */
+        $organizationRepository = static::getContainer()->get(OrganizationRepository::class);
+        $this->organizationRepository = $organizationRepository;
+
+        /** @var OrganizationMembershipRepository $organizationMembershipRepository */
+        $organizationMembershipRepository = static::getContainer()->get(OrganizationMembershipRepository::class);
+        $this->organizationMembershipRepository = $organizationMembershipRepository;
+
         $this->resetDatabase();
     }
 
@@ -68,6 +82,8 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
         $connection->executeStatement('DELETE FROM api_keys');
         $connection->executeStatement('DELETE FROM issues');
         $connection->executeStatement('DELETE FROM projects');
+        $connection->executeStatement('DELETE FROM organization_memberships');
+        $connection->executeStatement('DELETE FROM organizations');
         $connection->executeStatement('DELETE FROM users');
 
         // Re-enable foreign key checks
@@ -91,16 +107,52 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
 
         $this->userRepository->save($user, true);
 
+        // Create a personal organization for the user
+        $organization = $this->createTestOrganization($name ?? $email);
+
+        // Create membership with owner role
+        $membership = new OrganizationMembership();
+        $membership->setUser($user);
+        $membership->setOrganization($organization);
+        $membership->setRole(OrganizationMembership::ROLE_OWNER);
+        $this->organizationMembershipRepository->save($membership, true);
+
+        // Refresh user to get the membership relationship
+        $this->entityManager->refresh($user);
+
         return $user;
+    }
+
+    protected function createTestOrganization(
+        string $name = 'Test Organization',
+        ?string $slug = null,
+    ): Organization {
+        $organization = new Organization();
+        $organization->setName($name);
+        // Generate unique slug by adding a random suffix
+        $baseSlug = strtolower((string) preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
+        $organization->setSlug($slug ?? $baseSlug.'-'.bin2hex(random_bytes(4)));
+
+        $this->organizationRepository->save($organization, true);
+
+        return $organization;
     }
 
     protected function createTestProject(
         User $owner,
         string $name = 'Test Project',
+        ?Organization $organization = null,
     ): Project {
         $project = new Project();
         $project->setName($name);
         $project->setOwner($owner);
+
+        // Use provided organization or get user's default organization
+        $org = $organization ?? $owner->getDefaultOrganization();
+        if (null === $org) {
+            throw new \RuntimeException('User must have an organization to create a project');
+        }
+        $project->setOrganization($org);
 
         $this->projectRepository->save($project, true);
 

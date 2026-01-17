@@ -72,7 +72,7 @@ class IssueControllerTest extends AbstractIntegrationTestCase
             ->assertSeeIn('body', 'Test Issue');
     }
 
-    public function testCannotViewOtherUsersIssuesReturns403(): void
+    public function testCannotViewOtherOrganizationsIssuesReturns404(): void
     {
         $user1 = $this->createTestUser('user1@example.com');
         $user2 = $this->createTestUser('user2@example.com');
@@ -80,11 +80,11 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $project1 = $this->createTestProject($user1);
         $issue = $this->createTestIssue($project1);
 
-        // Login as user2
+        // Login as user2 (different organization) - should not find the issue
         $this->browser()
             ->actingAs($user2)
             ->visit('/issues/'.$issue->getPublicId()->toRfc4122())
-            ->assertStatus(403);
+            ->assertStatus(404);
     }
 
     public function testNonExistentIssueReturns404(): void
@@ -139,7 +139,7 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $this->assertSame(Issue::STATUS_IGNORED, $issue->getStatus());
     }
 
-    public function testCannotUpdateOtherUsersIssueStatusReturns403(): void
+    public function testCannotUpdateOtherOrganizationsIssueStatusReturns404(): void
     {
         $user1 = $this->createTestUser('user1@example.com');
         $user2 = $this->createTestUser('user2@example.com');
@@ -149,13 +149,13 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $issueId = $issue->getId();
         $publicId = $issue->getPublicId()->toRfc4122();
 
-        // Login as user2
+        // Login as user2 (different organization) - should not find the issue
         $this->browser()
             ->actingAs($user2)
             ->post('/issues/'.$publicId.'/status', [
                 'body' => ['status' => Issue::STATUS_RESOLVED],
             ])
-            ->assertStatus(403);
+            ->assertStatus(404);
 
         // Re-fetch issue from database after browser request
         $issue = $this->issueRepository->find($issueId);

@@ -25,6 +25,10 @@ doctrine:
         dql:
             string_functions:
                 DATE: DoctrineExtensions\Query\Sqlite\Date
+        filters:
+            organization:
+                class: App\Doctrine\Filter\OrganizationFilter
+                enabled: false
 
 when@test:
     doctrine:

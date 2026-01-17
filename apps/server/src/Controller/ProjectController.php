@@ -57,6 +57,15 @@ class ProjectController extends AbstractController
             $user = $this->getUser();
             $project->setOwner($user);
 
+            // Set the organization from the user's default organization
+            $organization = $user->getDefaultOrganization();
+            if (null === $organization) {
+                $this->addFlash('error', 'You must belong to an organization to create a project');
+
+                return $this->redirectToRoute('project_new');
+            }
+            $project->setOrganization($organization);
+
             $this->projectRepository->save($project, true);
 
             // Create a default API key

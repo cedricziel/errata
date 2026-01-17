@@ -49,9 +49,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
     private bool $isActive = true;
 
+    /** @var Collection<int, OrganizationMembership> */
+    #[ORM\OneToMany(targetEntity: OrganizationMembership::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $memberships;
+
     public function __construct()
     {
         $this->projects = new ArrayCollection();
+        $this->memberships = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -181,5 +186,71 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->isActive = $isActive;
 
         return $this;
+    }
+
+    /** @return Collection<int, OrganizationMembership> */
+    public function getMemberships(): Collection
+    {
+        return $this->memberships;
+    }
+
+    public function addMembership(OrganizationMembership $membership): static
+    {
+        if (!$this->memberships->contains($membership)) {
+            $this->memberships->add($membership);
+            $membership->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeMembership(OrganizationMembership $membership): static
+    {
+        $this->memberships->removeElement($membership);
+
+        return $this;
+    }
+
+    public function getDefaultOrganization(): ?Organization
+    {
+        $membership = $this->memberships->first();
+
+        return $membership instanceof OrganizationMembership ? $membership->getOrganization() : null;
+    }
+
+    public function isMemberOf(Organization $organization): bool
+    {
+        foreach ($this->memberships as $membership) {
+            if ($membership->getOrganization() === $organization) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function getMembershipFor(Organization $organization): ?OrganizationMembership
+    {
+        foreach ($this->memberships as $membership) {
+            if ($membership->getOrganization() === $organization) {
+                return $membership;
+            }
+        }
+
+        return null;
+    }
+
+    public function hasRoleIn(Organization $organization, string $role): bool
+    {
+        $membership = $this->getMembershipFor($organization);
+
+        return null !== $membership && $membership->getRole() === $role;
+    }
+
+    public function canManageMembersIn(Organization $organization): bool
+    {
+        $membership = $this->getMembershipFor($organization);
+
+        return null !== $membership && $membership->canManageMembers();
     }
 }

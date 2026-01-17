@@ -123,18 +123,18 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
             ->assertSeeIn('body', 'Detail Test Project');
     }
 
-    public function testCannotViewOtherUsersProjectReturns403(): void
+    public function testCannotViewOtherOrganizationsProjectReturns404(): void
     {
         $user1 = $this->createTestUser('user1@example.com');
         $user2 = $this->createTestUser('user2@example.com');
 
         $project = $this->createTestProject($user1, 'User1 Project');
 
-        // Login as user2
+        // Login as user2 (different organization) - should not find the project
         $this->browser()
             ->actingAs($user2)
             ->visit('/projects/'.$project->getPublicId()->toRfc4122())
-            ->assertStatus(403);
+            ->assertStatus(404);
     }
 
     public function testEditProjectUpdatesFields(): void
@@ -210,7 +210,7 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $this->assertFalse($apiKey->isActive());
     }
 
-    public function testCannotRevokeOtherUsersApiKeyReturns403(): void
+    public function testCannotRevokeOtherOrganizationsApiKeyReturns404(): void
     {
         $user1 = $this->createTestUser('user1@example.com');
         $user2 = $this->createTestUser('user2@example.com');
@@ -220,11 +220,11 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $apiKeyId = $keyData['apiKey']->getId();
         $publicId = $project->getPublicId()->toRfc4122();
 
-        // Login as user2
+        // Login as user2 (different organization) - should not find the project
         $this->browser()
             ->actingAs($user2)
             ->post('/projects/'.$publicId.'/keys/'.$apiKeyId.'/revoke')
-            ->assertStatus(403);
+            ->assertStatus(404);
 
         // Re-fetch API key from database after browser request
         $apiKey = $this->apiKeyRepository->find($apiKeyId);
@@ -267,15 +267,16 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
             ->assertRedirectedTo('/login');
     }
 
-    public function testCannotViewOtherUsersOtelSettingsReturns403(): void
+    public function testCannotViewOtherOrganizationsOtelSettingsReturns404(): void
     {
         $user1 = $this->createTestUser('owner@example.com');
         $user2 = $this->createTestUser('other@example.com');
         $project = $this->createTestProject($user1);
 
+        // Login as user2 (different organization) - should not find the project
         $this->browser()
             ->actingAs($user2)
             ->visit('/projects/'.$project->getPublicId()->toRfc4122().'/settings/opentelemetry')
-            ->assertStatus(403);
+            ->assertStatus(404);
     }
 }

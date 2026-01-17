@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Repository\IssueRepository;
 use App\Repository\ProjectRepository;
 use App\Service\Parquet\ParquetReaderService;
+use Doctrine\ORM\EntityNotFoundException as DoctrineEntityNotFoundException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -89,14 +90,23 @@ class IssueController extends AbstractController
             throw $this->createNotFoundException('Issue not found');
         }
 
+        // Try to access the project - may throw if organization filter hides it
+        try {
+            $project = $issue->getProject();
+            // Force proxy initialization to catch EntityNotFoundException
+            // getId() won't work as the ID is already known by the proxy
+            $project->getName();
+        } catch (DoctrineEntityNotFoundException) {
+            throw $this->createNotFoundException('Issue not found');
+        }
+
         // Verify user has access to this issue's project
         $user = $this->getUser();
-        if ($issue->getProject()->getOwner() !== $user) {
+        if ($project->getOwner() !== $user) {
             throw $this->createAccessDeniedException('You do not have access to this issue');
         }
 
         // Get related events from Parquet
-        $project = $issue->getProject();
         $projectId = $project->getPublicId()->toRfc4122();
         $events = $this->parquetReader->getEventsByFingerprint(
             $projectId,
@@ -120,9 +130,18 @@ class IssueController extends AbstractController
             throw $this->createNotFoundException('Issue not found');
         }
 
+        // Try to access the project - may throw if organization filter hides it
+        try {
+            $project = $issue->getProject();
+            // Force proxy initialization to catch EntityNotFoundException
+            $project->getName();
+        } catch (DoctrineEntityNotFoundException) {
+            throw $this->createNotFoundException('Issue not found');
+        }
+
         // Verify user has access
         $user = $this->getUser();
-        if ($issue->getProject()->getOwner() !== $user) {
+        if ($project->getOwner() !== $user) {
             throw $this->createAccessDeniedException('You do not have access to this issue');
         }
 
