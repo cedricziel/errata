@@ -47,11 +47,12 @@ jobs:
 
       - name: Run post-deploy commands
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
             cd ${{ secrets.DEPLOY_PATH }}
             mkdir -p var/data var/cache var/log storage/parquet
             touch var/data/errata.db
             echo 'APP_ENV=prod' > .env.local
+            echo 'WORKER_SECRET=${{ secrets.WORKER_SECRET }}' >> .env.local
             composer install --no-dev --optimize-autoloader
             php bin/console importmap:install
             php bin/console asset-map:compile
