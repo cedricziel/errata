@@ -133,7 +133,7 @@
                                     {% endif %}
                                 </div>
                                 <span class="text-sm text-gray-500">
-                                    {{ (event.timestamp / 1000)|date_modify('+0 seconds')|date('M j, Y g:ia') }}
+                                    {{ ((event.timestamp / 1000)|round)|date('M j, Y g:ia') }}
                                 </span>
                             </div>
 
