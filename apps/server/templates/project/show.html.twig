@@ -1,0 +1,177 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Breadcrumb #}
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol role="list" class="flex items-center space-x-4">
+            <li>
+                <a href="{{ path('project_index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Projects</a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-4 text-sm font-medium text-gray-500">{{ project.name }}</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    {# Project Info #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 flex items-center justify-between border-b border-gray-200">
+            <div>
+                <h1 class="text-xl font-semibold text-gray-900">{{ project.name }}</h1>
+                {% if project.bundleIdentifier %}
+                    <p class="mt-1 text-sm text-gray-500 font-mono">{{ project.bundleIdentifier }}</p>
+                {% endif %}
+            </div>
+            <a href="{{ path('project_edit', { publicId: project.publicId }) }}"
+               class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                Edit
+            </a>
+        </div>
+
+        <dl class="px-4 py-5 sm:px-6 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-3">
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Project ID</dt>
+                <dd class="mt-1 text-sm text-gray-900 font-mono">{{ project.publicId }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Platform</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ project.platform|default('iOS')|capitalize }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Created</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ project.createdAt|date('M j, Y') }}</dd>
+            </div>
+        </dl>
+    </div>
+
+    {# SDK Integration #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">SDK Integration</h2>
+            <p class="mt-1 text-sm text-gray-500">Add the Errata SDK to your iOS app</p>
+        </div>
+
+        <div class="px-4 py-5 sm:px-6 space-y-4">
+            <div>
+                <h3 class="text-sm font-medium text-gray-900">1. Add the Swift Package</h3>
+                <div class="mt-2 bg-gray-900 rounded-md p-4">
+                    <pre class="text-sm text-gray-300 font-mono">.package(url: "https://github.com/yourorg/errata", from: "0.1.0")</pre>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-sm font-medium text-gray-900">2. Initialize the SDK</h3>
+                <div class="mt-2 bg-gray-900 rounded-md p-4">
+                    <pre class="text-sm text-gray-300 font-mono">import ErrataSDK
+
+// In your AppDelegate or App init
+Errata.shared.start(with: Configuration(
+    dsn: "https://&lt;API_KEY&gt;@{{ app.request.host }}/{{ project.publicId }}"
+))</pre>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            Replace <code class="bg-blue-100 px-1 rounded">&lt;API_KEY&gt;</code> with one of your API keys below.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# API Keys #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 flex items-center justify-between border-b border-gray-200">
+            <div>
+                <h2 class="text-lg font-medium text-gray-900">API Keys</h2>
+                <p class="mt-1 text-sm text-gray-500">Manage authentication keys for this project</p>
+            </div>
+            <form method="post" action="{{ path('project_create_key', { publicId: project.publicId }) }}" class="flex items-center space-x-2">
+                <select name="environment" class="rounded-md border-gray-300 text-sm">
+                    <option value="development">Development</option>
+                    <option value="staging">Staging</option>
+                    <option value="production">Production</option>
+                </select>
+                <input type="text" name="label" placeholder="Label" class="rounded-md border-gray-300 text-sm w-32">
+                <button type="submit"
+                        class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    <svg class="-ml-0.5 mr-1.5 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Create Key
+                </button>
+            </form>
+        </div>
+
+        {% if apiKeys|length > 0 %}
+            <ul role="list" class="divide-y divide-gray-200">
+                {% for key in apiKeys %}
+                    <li class="px-4 py-4 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center space-x-3">
+                                    <span class="font-mono text-sm text-gray-900">{{ key.keyPrefix }}...</span>
+                                    {% if key.label %}
+                                        <span class="text-sm text-gray-500">({{ key.label }})</span>
+                                    {% endif %}
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                                        {% if key.environment == 'production' %}bg-red-100 text-red-800
+                                        {% elseif key.environment == 'staging' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ key.environment|capitalize }}
+                                    </span>
+                                    {% if not key.isActive %}
+                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Revoked</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-1 flex items-center space-x-4 text-xs text-gray-500">
+                                    <span>Created {{ key.createdAt|date('M j, Y') }}</span>
+                                    {% if key.lastUsedAt %}
+                                        <span>Last used {{ key.lastUsedAt|date('M j, Y g:ia') }}</span>
+                                    {% else %}
+                                        <span>Never used</span>
+                                    {% endif %}
+                                    {% if key.expiresAt %}
+                                        <span>Expires {{ key.expiresAt|date('M j, Y') }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if key.isActive %}
+                                <form method="post" action="{{ path('project_revoke_key', { publicId: project.publicId, keyId: key.id }) }}"
+                                      onsubmit="return confirm('Are you sure you want to revoke this API key?')">
+                                    <button type="submit"
+                                            class="text-sm text-red-600 hover:text-red-500">
+                                        Revoke
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="text-center py-12">
+                <p class="text-sm text-gray-500">No API keys yet. Create one to start sending events.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

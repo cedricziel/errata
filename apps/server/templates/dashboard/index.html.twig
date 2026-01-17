@@ -1,0 +1,194 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Header #}
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p class="mt-1 text-sm text-gray-500">Overview of your error monitoring</p>
+        </div>
+        {% if projects|length > 1 %}
+        <div class="mt-4 sm:mt-0">
+            <select onchange="window.location.href='{{ path('dashboard') }}?project=' + this.value"
+                    class="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                {% for project in projects %}
+                    <option value="{{ project.publicId }}" {{ selectedProject and selectedProject.id == project.id ? 'selected' : '' }}>
+                        {{ project.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if selectedProject is null %}
+        {# No projects #}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-semibold text-gray-900">No projects</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by creating a new project.</p>
+            <div class="mt-6">
+                <a href="{{ path('project_new') }}"
+                   class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    New Project
+                </a>
+            </div>
+        </div>
+    {% else %}
+        {# Stats Cards #}
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-md bg-red-100 p-3">
+                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="truncate text-sm font-medium text-gray-500">Open Issues</dt>
+                                <dd class="text-lg font-semibold text-gray-900">{{ stats.open_issues }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-md bg-green-100 p-3">
+                                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="truncate text-sm font-medium text-gray-500">Resolved</dt>
+                                <dd class="text-lg font-semibold text-gray-900">{{ stats.resolved_issues }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-md bg-orange-100 p-3">
+                                <svg class="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="truncate text-sm font-medium text-gray-500">Crashes</dt>
+                                <dd class="text-lg font-semibold text-gray-900">{{ stats.crashes }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-md bg-yellow-100 p-3">
+                                <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="truncate text-sm font-medium text-gray-500">Errors</dt>
+                                <dd class="text-lg font-semibold text-gray-900">{{ stats.errors }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Charts #}
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div class="lg:col-span-2 overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-5">
+                    <h3 class="text-lg font-medium text-gray-900">Issues Over Time</h3>
+                    <div class="mt-4 h-64">
+                        {{ render_chart(issuesOverTimeChart) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-5">
+                    <h3 class="text-lg font-medium text-gray-900">Issues by Type</h3>
+                    <div class="mt-4 h-64">
+                        {{ render_chart(eventsByTypeChart) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Top Issues #}
+        <div class="overflow-hidden rounded-lg bg-white shadow">
+            <div class="p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">Top Open Issues</h3>
+                    <a href="{{ path('issue_index', { project: selectedProject.publicId }) }}" class="text-sm text-indigo-600 hover:text-indigo-500">
+                        View all &rarr;
+                    </a>
+                </div>
+                {% if topIssues|length > 0 %}
+                    <div class="mt-4 divide-y divide-gray-200">
+                        {% for issue in topIssues %}
+                            <a href="{{ path('issue_show', { publicId: issue.publicId }) }}" class="block py-3 hover:bg-gray-50 -mx-5 px-5">
+                                <div class="flex items-center justify-between">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center space-x-2">
+                                            {% if issue.type == 'crash' %}
+                                                <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Crash</span>
+                                            {% elseif issue.type == 'error' %}
+                                                <span class="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800">Error</span>
+                                            {% else %}
+                                                <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">Log</span>
+                                            {% endif %}
+                                            <p class="truncate text-sm font-medium text-gray-900">{{ issue.title }}</p>
+                                        </div>
+                                        {% if issue.culprit %}
+                                            <p class="mt-1 truncate text-sm text-gray-500">{{ issue.culprit }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-4 flex flex-shrink-0 items-center space-x-4">
+                                        <span class="text-sm text-gray-500">{{ issue.occurrenceCount }} events</span>
+                                        <span class="text-sm text-gray-400">{{ issue.lastSeenAt|date('M j, g:ia') }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="mt-4 text-sm text-gray-500">No open issues. Great job!</p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

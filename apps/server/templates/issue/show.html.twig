@@ -1,0 +1,207 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ issue.title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Breadcrumb #}
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol role="list" class="flex items-center space-x-4">
+            <li>
+                <a href="{{ path('issue_index', { project: project.publicId }) }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Issues</a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-4 text-sm font-medium text-gray-500">{{ issue.publicId|slice(0, 8) }}...</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    {# Header #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center space-x-3">
+                        {% if issue.type == 'crash' %}
+                            <span class="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">Crash</span>
+                        {% elseif issue.type == 'error' %}
+                            <span class="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-sm font-medium text-orange-800">Error</span>
+                        {% else %}
+                            <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">Log</span>
+                        {% endif %}
+
+                        {% if issue.status == 'open' %}
+                            <span class="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-800">Open</span>
+                        {% elseif issue.status == 'resolved' %}
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">Resolved</span>
+                        {% else %}
+                            <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800">Ignored</span>
+                        {% endif %}
+
+                        {% if issue.severity %}
+                            <span class="text-sm text-gray-500">Severity: {{ issue.severity|capitalize }}</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="mt-2 text-xl font-semibold text-gray-900">{{ issue.title }}</h1>
+                    {% if issue.culprit %}
+                        <p class="mt-1 text-sm text-gray-500 font-mono">{{ issue.culprit }}</p>
+                    {% endif %}
+                </div>
+
+                {# Status Actions #}
+                <div class="flex items-center space-x-2">
+                    <form method="post" action="{{ path('issue_update_status', { publicId: issue.publicId }) }}" class="inline">
+                        {% if issue.status == 'open' %}
+                            <button type="submit" name="status" value="resolved"
+                                    class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
+                                Resolve
+                            </button>
+                            <button type="submit" name="status" value="ignored"
+                                    class="inline-flex items-center rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500">
+                                Ignore
+                            </button>
+                        {% elseif issue.status == 'resolved' %}
+                            <button type="submit" name="status" value="open"
+                                    class="inline-flex items-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500">
+                                Reopen
+                            </button>
+                        {% else %}
+                            <button type="submit" name="status" value="open"
+                                    class="inline-flex items-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500">
+                                Reopen
+                            </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# Stats #}
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Events</dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ issue.occurrenceCount }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Affected Users</dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ issue.affectedUsers }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">First Seen</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ issue.firstSeenAt|date('M j, Y g:ia') }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Last Seen</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ issue.lastSeenAt|date('M j, Y g:ia') }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    {# Events #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Recent Events</h3>
+        </div>
+
+        {% if events|length > 0 %}
+            <ul role="list" class="divide-y divide-gray-200">
+                {% for event in events %}
+                    <li class="px-4 py-4 sm:px-6">
+                        <div class="space-y-3">
+                            {# Event header #}
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-xs font-mono text-gray-400">{{ event.event_id[:8] }}...</span>
+                                    {% if event.severity %}
+                                        {% set severityColor = {
+                                            'fatal': 'red',
+                                            'error': 'orange',
+                                            'warning': 'yellow',
+                                            'info': 'blue',
+                                            'debug': 'gray'
+                                        } %}
+                                        <span class="inline-flex items-center rounded-full bg-{{ severityColor[event.severity]|default('gray') }}-100 px-2 py-0.5 text-xs font-medium text-{{ severityColor[event.severity]|default('gray') }}-800">
+                                            {{ event.severity|capitalize }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <span class="text-sm text-gray-500">
+                                    {{ (event.timestamp / 1000)|date_modify('+0 seconds')|date('M j, Y g:ia') }}
+                                </span>
+                            </div>
+
+                            {# Message #}
+                            {% if event.message %}
+                                <div class="bg-gray-50 rounded-md p-3">
+                                    <pre class="text-sm text-gray-800 whitespace-pre-wrap font-mono">{{ event.message }}</pre>
+                                </div>
+                            {% endif %}
+
+                            {# Stack trace #}
+                            {% if event.stack_trace and event.stack_trace|length > 0 %}
+                                <details class="group">
+                                    <summary class="cursor-pointer text-sm text-indigo-600 hover:text-indigo-500">
+                                        Show stack trace ({{ event.stack_trace|length }} frames)
+                                    </summary>
+                                    <div class="mt-2 bg-gray-900 rounded-md p-4 overflow-x-auto">
+                                        <pre class="text-xs text-gray-300 font-mono">{% for frame in event.stack_trace %}{{ frame.module|default(frame.filename|default('unknown')) }} in {{ frame.function|default('?') }}{% if frame.lineno %}:{{ frame.lineno }}{% endif %}
+
+{% endfor %}</pre>
+                                    </div>
+                                </details>
+                            {% endif %}
+
+                            {# Device info #}
+                            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                {% if event.device_model %}<span>{{ event.device_model }}</span>{% endif %}
+                                {% if event.os_name and event.os_version %}<span>{{ event.os_name }} {{ event.os_version }}</span>{% endif %}
+                                {% if event.app_version %}<span>v{{ event.app_version }}{% if event.app_build %} ({{ event.app_build }}){% endif %}</span>{% endif %}
+                                {% if event.environment %}<span class="px-1.5 py-0.5 rounded bg-gray-100">{{ event.environment }}</span>{% endif %}
+                            </div>
+
+                            {# Breadcrumbs #}
+                            {% if event.breadcrumbs and event.breadcrumbs|length > 0 %}
+                                <details class="group">
+                                    <summary class="cursor-pointer text-sm text-indigo-600 hover:text-indigo-500">
+                                        Show breadcrumbs ({{ event.breadcrumbs|length }})
+                                    </summary>
+                                    <div class="mt-2 space-y-1">
+                                        {% for breadcrumb in event.breadcrumbs|slice(-10) %}
+                                            <div class="flex items-center text-xs text-gray-600">
+                                                <span class="text-gray-400 w-20">{{ breadcrumb.category|default('?') }}</span>
+                                                <span>{{ breadcrumb.message|default(breadcrumb.data|json_encode|default('')) }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            {% endif %}
+
+                            {# Tags and context #}
+                            {% if event.tags and event.tags|length > 0 %}
+                                <div class="flex flex-wrap gap-1">
+                                    {% for key, value in event.tags %}
+                                        <span class="inline-flex items-center rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
+                                            {{ key }}: {{ value }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="text-center py-12">
+                <p class="text-sm text-gray-500">No events found in Parquet storage.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

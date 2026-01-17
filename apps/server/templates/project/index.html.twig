@@ -1,0 +1,89 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Header #}
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
+            <p class="mt-1 text-sm text-gray-500">Manage your iOS apps and their API keys</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <a href="{{ path('project_new') }}"
+               class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+                New Project
+            </a>
+        </div>
+    </div>
+
+    {# Projects List #}
+    {% if projects|length > 0 %}
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {% for project in projects %}
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center">
+                                    <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <h3 class="text-lg font-medium text-gray-900">{{ project.name }}</h3>
+                                {% if project.bundleIdentifier %}
+                                    <p class="text-sm text-gray-500 font-mono">{{ project.bundleIdentifier }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex items-center text-sm text-gray-500">
+                            <span>Created {{ project.createdAt|date('M j, Y') }}</span>
+                            {% if project.platform %}
+                                <span class="mx-2">&middot;</span>
+                                <span>{{ project.platform|capitalize }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 px-5 py-3">
+                        <div class="flex items-center justify-between">
+                            <a href="{{ path('project_show', { publicId: project.publicId }) }}"
+                               class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                View details &rarr;
+                            </a>
+                            <a href="{{ path('dashboard', { project: project.publicId }) }}"
+                               class="text-sm text-gray-500 hover:text-gray-700">
+                                Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-12 bg-white rounded-lg shadow">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-semibold text-gray-900">No projects</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by creating a new project.</p>
+            <div class="mt-6">
+                <a href="{{ path('project_new') }}"
+                   class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    New Project
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

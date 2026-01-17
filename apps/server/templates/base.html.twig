@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Errata{% endblock %} - Issue Monitoring</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>🐛</text></svg>">
+
+    {# Tailwind CSS via CDN for MVP - replace with compiled CSS for production #}
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    {% block stylesheets %}
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    {% endblock %}
+
+    {% block javascripts %}
+        {% block importmap %}{{ importmap('app') }}{% endblock %}
+    {% endblock %}
+</head>
+<body class="h-full">
+    {% block body %}{% endblock %}
+</body>
+</html>

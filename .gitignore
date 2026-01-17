@@ -1,0 +1,43 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env.local
+.env.*.local
+.env.local.php
+
+# Symfony
+apps/server/var/
+apps/server/vendor/
+apps/server/node_modules/
+apps/server/public/build/
+apps/server/.php-cs-fixer.cache
+
+# Parquet storage (keep structure but ignore data files)
+apps/server/storage/parquet/**/*.parquet
+
+# Logs
+*.log
+
+# Swift Package Manager
+packages/sdk-swift/.build/
+packages/sdk-swift/.swiftpm/
+packages/sdk-swift/Package.resolved
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# Test outputs
+coverage/
+.phpunit.result.cache
