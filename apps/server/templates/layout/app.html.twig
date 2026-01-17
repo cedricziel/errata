@@ -27,7 +27,10 @@
                         </a>
                     </div>
                 </div>
-                <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                <div class="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+                    {# Timeframe Picker #}
+                    {% include 'components/_timeframe_picker.html.twig' %}
+
                     {# Organization Switcher Dropdown #}
                     {% if current_organization %}
                     <div class="relative" data-controller="dropdown">

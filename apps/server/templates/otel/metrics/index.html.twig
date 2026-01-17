@@ -49,7 +49,7 @@
 
     {# Filters #}
     <div class="bg-white shadow rounded-lg p-4">
-        <form method="get" class="grid grid-cols-1 gap-4 sm:grid-cols-5">
+        <form method="get" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
                 <label for="metric" class="block text-sm font-medium text-gray-700">Metric Name</label>
                 <select id="metric" name="metric"
@@ -61,24 +61,12 @@
                 </select>
             </div>
 
-            <div>
-                <label for="from" class="block text-sm font-medium text-gray-700">From</label>
-                <input type="datetime-local" id="from" name="from" value="{{ filters.from|default('') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
-            </div>
-
-            <div>
-                <label for="to" class="block text-sm font-medium text-gray-700">To</label>
-                <input type="datetime-local" id="to" name="to" value="{{ filters.to|default('') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
-            </div>
-
             <div class="flex items-end col-span-2">
                 <button type="submit"
                         class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                     Filter
                 </button>
-                {% if filters.metric or filters.from or filters.to %}
+                {% if filters.metric %}
                     <a href="{{ path('otel_metrics_index', { publicId: project.publicId }) }}"
                        class="ml-2 text-sm text-gray-500 hover:text-gray-700">Clear</a>
                 {% endif %}
@@ -182,10 +170,10 @@
                 </svg>
                 <h3 class="mt-2 text-sm font-semibold text-gray-900">No metrics found</h3>
                 <p class="mt-1 text-sm text-gray-500">
-                    {% if filters.metric or filters.from or filters.to %}
-                        Try adjusting your filters.
+                    {% if filters.metric %}
+                        Try adjusting your filters or timeframe.
                     {% else %}
-                        No metrics have been received yet. Send some OTLP metric data to get started.
+                        No metrics have been received in the selected timeframe. Try adjusting the timeframe or send some OTLP metric data to get started.
                     {% endif %}
                 </p>
             </div>

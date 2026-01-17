@@ -1,0 +1,82 @@
+{# Timeframe Picker Dropdown Component #}
+{# Used in the navigation bar to select a global time range for filtering data #}
+
+{% if current_timeframe %}
+<div class="relative" data-controller="timeframe-picker">
+    <button type="button"
+            data-action="click->timeframe-picker#toggle"
+            class="flex items-center space-x-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+        {# Clock icon #}
+        <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>{{ current_timeframe.label }}</span>
+        {# Chevron down icon #}
+        <svg class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+    </button>
+
+    <div data-timeframe-picker-target="menu"
+         class="hidden absolute right-0 z-20 mt-2 w-72 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+        <div class="py-1">
+            {# Quick Ranges Section #}
+            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Quick Ranges
+            </div>
+
+            {% for preset_key, preset_label in timeframe_presets %}
+                <form action="{{ path('timeframe_set') }}" method="POST" class="block">
+                    <input type="hidden" name="preset" value="{{ preset_key }}">
+                    <button type="submit"
+                            class="flex w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <span>{{ preset_label }}</span>
+                        {% if current_timeframe.preset == preset_key %}
+                            <svg class="h-4 w-4 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        {% endif %}
+                    </button>
+                </form>
+            {% endfor %}
+
+            {# Divider #}
+            <div class="my-1 border-t border-gray-100"></div>
+
+            {# Custom Range Section #}
+            <div class="px-4 py-2">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Custom Range
+                </div>
+
+                <form action="{{ path('timeframe_set') }}" method="POST" class="space-y-3">
+                    <input type="hidden" name="preset" value="custom">
+
+                    <div>
+                        <label for="custom_from" class="block text-xs font-medium text-gray-600">From</label>
+                        <input type="datetime-local"
+                               id="custom_from"
+                               name="custom_from"
+                               value="{{ current_timeframe.preset == 'custom' ? current_timeframe.fromFormatted : '' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 py-1.5 px-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+
+                    <div>
+                        <label for="custom_to" class="block text-xs font-medium text-gray-600">To</label>
+                        <input type="datetime-local"
+                               id="custom_to"
+                               name="custom_to"
+                               value="{{ current_timeframe.preset == 'custom' ? current_timeframe.toFormatted : '' }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 py-1.5 px-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+
+                    <button type="submit"
+                            class="w-full inline-flex justify-center items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                        Apply Custom Range
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

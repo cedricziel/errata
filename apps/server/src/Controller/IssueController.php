@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Repository\IssueRepository;
 use App\Repository\ProjectRepository;
 use App\Service\Parquet\ParquetReaderService;
+use App\Service\TimeframeService;
 use Doctrine\ORM\EntityNotFoundException as DoctrineEntityNotFoundException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,6 +23,7 @@ class IssueController extends AbstractController
         private readonly ProjectRepository $projectRepository,
         private readonly IssueRepository $issueRepository,
         private readonly ParquetReaderService $parquetReader,
+        private readonly TimeframeService $timeframeService,
     ) {
     }
 
@@ -53,17 +55,20 @@ class IssueController extends AbstractController
             ]);
         }
 
+        // Resolve timeframe from global picker
+        $timeframe = $this->timeframeService->resolveTimeframe($request);
+
         // Get filters from query
         $filters = [
             'status' => $request->query->get('status'),
             'type' => $request->query->get('type'),
             'severity' => $request->query->get('severity'),
             'search' => $request->query->get('search'),
-            'from' => $request->query->get('from'),
-            'to' => $request->query->get('to'),
+            'from' => $timeframe->from->format('Y-m-d H:i:s'),
+            'to' => $timeframe->to->format('Y-m-d H:i:s'),
         ];
 
-        // Remove empty filters
+        // Remove empty filters (except from/to which are always set)
         $filters = array_filter($filters, fn ($v) => null !== $v && '' !== $v);
 
         $page = max(1, (int) $request->query->get('page', '1'));
@@ -78,6 +83,7 @@ class IssueController extends AbstractController
             'issues' => $issues,
             'filters' => $filters,
             'page' => $page,
+            'timeframe' => $timeframe,
         ]);
     }
 

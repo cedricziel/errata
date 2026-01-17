@@ -9,6 +9,7 @@ use App\Entity\Project;
 use App\Entity\User;
 use App\Repository\IssueRepository;
 use App\Repository\ProjectRepository;
+use App\Service\TimeframeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,6 +23,7 @@ class DashboardController extends AbstractController
         private readonly ProjectRepository $projectRepository,
         private readonly IssueRepository $issueRepository,
         private readonly ChartBuilderInterface $chartBuilder,
+        private readonly TimeframeService $timeframeService,
     ) {
     }
 
@@ -44,15 +46,18 @@ class DashboardController extends AbstractController
             $selectedProject = $projects[0];
         }
 
+        // Resolve the global timeframe
+        $timeframe = $this->timeframeService->resolveTimeframe($request);
+
         $stats = null;
         $issuesOverTimeChart = null;
         $eventsByTypeChart = null;
         $topIssues = [];
 
         if (null !== $selectedProject) {
-            $stats = $this->getProjectStats($selectedProject);
-            $issuesOverTimeChart = $this->createIssuesOverTimeChart($selectedProject);
-            $eventsByTypeChart = $this->createEventsByTypeChart($selectedProject);
+            $stats = $this->getProjectStats($selectedProject, $timeframe->from, $timeframe->to);
+            $issuesOverTimeChart = $this->createIssuesOverTimeChart($selectedProject, $timeframe->from, $timeframe->to);
+            $eventsByTypeChart = $this->createEventsByTypeChart($selectedProject, $timeframe->from, $timeframe->to);
             $topIssues = $this->issueRepository->findOpenIssues($selectedProject, 10);
         }
 
@@ -63,21 +68,22 @@ class DashboardController extends AbstractController
             'issuesOverTimeChart' => $issuesOverTimeChart,
             'eventsByTypeChart' => $eventsByTypeChart,
             'topIssues' => $topIssues,
+            'timeframe' => $timeframe,
         ]);
     }
 
     /**
-     * Get statistics for a project.
+     * Get statistics for a project within a timeframe.
      *
      * @return array<string, mixed>
      */
-    private function getProjectStats(Project $project): array
+    private function getProjectStats(Project $project, \DateTimeInterface $from, \DateTimeInterface $to): array
     {
-        $openCount = $this->issueRepository->countByProject($project, Issue::STATUS_OPEN);
-        $resolvedCount = $this->issueRepository->countByProject($project, Issue::STATUS_RESOLVED);
-        $totalCount = $this->issueRepository->countByProject($project);
+        $openCount = $this->issueRepository->countByProjectInTimeframe($project, Issue::STATUS_OPEN, $from, $to);
+        $resolvedCount = $this->issueRepository->countByProjectInTimeframe($project, Issue::STATUS_RESOLVED, $from, $to);
+        $totalCount = $this->issueRepository->countByProjectInTimeframe($project, null, $from, $to);
 
-        $countsByType = $this->issueRepository->getIssueCountsByType($project);
+        $countsByType = $this->issueRepository->getIssueCountsByTypeInTimeframe($project, $from, $to);
 
         return [
             'open_issues' => $openCount,
@@ -91,17 +97,31 @@ class DashboardController extends AbstractController
     /**
      * Create chart for issues over time.
      */
-    private function createIssuesOverTimeChart(Project $project): Chart
+    private function createIssuesOverTimeChart(Project $project, \DateTimeInterface $from, \DateTimeInterface $to): Chart
     {
-        $data = $this->issueRepository->getIssuesOverTime($project, 30);
+        // Calculate the number of days in the timeframe
+        $interval = $from->diff($to);
+        $days = max(1, $interval->days);
+
+        $data = $this->issueRepository->getIssuesOverTimeInRange($project, $from, $to);
 
         $labels = [];
         $counts = [];
 
-        // Fill in missing days
-        $end = new \DateTimeImmutable();
-        $start = $end->modify('-30 days');
-        $period = new \DatePeriod($start, new \DateInterval('P1D'), $end->modify('+1 day'));
+        // Create DateTimeImmutable versions for manipulation
+        $startDate = \DateTimeImmutable::createFromInterface($from);
+        $endDate = \DateTimeImmutable::createFromInterface($to);
+
+        // For short timeframes (less than 2 days), use hourly buckets
+        if ($days < 2) {
+            $bucketInterval = new \DateInterval('PT1H');
+            $dateFormat = 'H:i';
+        } else {
+            $bucketInterval = new \DateInterval('P1D');
+            $dateFormat = 'M j';
+        }
+
+        $period = new \DatePeriod($startDate, $bucketInterval, $endDate->modify('+1 second'));
 
         $dataMap = [];
         foreach ($data as $row) {
@@ -109,8 +129,12 @@ class DashboardController extends AbstractController
         }
 
         foreach ($period as $date) {
-            $dateStr = $date->format('Y-m-d');
-            $labels[] = $date->format('M j');
+            if ($days < 2) {
+                $dateStr = $date->format('Y-m-d H:00');
+            } else {
+                $dateStr = $date->format('Y-m-d');
+            }
+            $labels[] = $date->format($dateFormat);
             $counts[] = $dataMap[$dateStr] ?? 0;
         }
 
@@ -153,9 +177,9 @@ class DashboardController extends AbstractController
     /**
      * Create chart for events by type.
      */
-    private function createEventsByTypeChart(Project $project): Chart
+    private function createEventsByTypeChart(Project $project, \DateTimeInterface $from, \DateTimeInterface $to): Chart
     {
-        $countsByType = $this->issueRepository->getIssueCountsByType($project);
+        $countsByType = $this->issueRepository->getIssueCountsByTypeInTimeframe($project, $from, $to);
 
         $labels = [];
         $data = [];

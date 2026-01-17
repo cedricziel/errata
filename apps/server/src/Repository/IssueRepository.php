@@ -182,6 +182,76 @@ class IssueRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Count issues in a project within a time range.
+     */
+    public function countByProjectInTimeframe(Project $project, ?string $status, \DateTimeInterface $from, \DateTimeInterface $to): int
+    {
+        $qb = $this->createQueryBuilder('i')
+            ->select('COUNT(i.id)')
+            ->andWhere('i.project = :project')
+            ->andWhere('i.firstSeenAt >= :from')
+            ->andWhere('i.firstSeenAt <= :to')
+            ->setParameter('project', $project)
+            ->setParameter('from', $from)
+            ->setParameter('to', $to);
+
+        if (null !== $status) {
+            $qb->andWhere('i.status = :status')
+                ->setParameter('status', $status);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * Get issue counts by type within a time range.
+     *
+     * @return array<string, int>
+     */
+    public function getIssueCountsByTypeInTimeframe(Project $project, \DateTimeInterface $from, \DateTimeInterface $to): array
+    {
+        $result = $this->createQueryBuilder('i')
+            ->select('i.type, COUNT(i.id) as count')
+            ->andWhere('i.project = :project')
+            ->andWhere('i.firstSeenAt >= :from')
+            ->andWhere('i.firstSeenAt <= :to')
+            ->setParameter('project', $project)
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->groupBy('i.type')
+            ->getQuery()
+            ->getResult();
+
+        $counts = [];
+        foreach ($result as $row) {
+            $counts[$row['type']] = (int) $row['count'];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Get issues over time within a specific date range.
+     *
+     * @return array<array{date: string, count: int}>
+     */
+    public function getIssuesOverTimeInRange(Project $project, \DateTimeInterface $from, \DateTimeInterface $to): array
+    {
+        return $this->createQueryBuilder('i')
+            ->select('DATE(i.firstSeenAt) as date, COUNT(i.id) as count')
+            ->andWhere('i.project = :project')
+            ->andWhere('i.firstSeenAt >= :from')
+            ->andWhere('i.firstSeenAt <= :to')
+            ->setParameter('project', $project)
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->groupBy('date')
+            ->orderBy('date', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function save(Issue $issue, bool $flush = false): void
     {
         $this->getEntityManager()->persist($issue);

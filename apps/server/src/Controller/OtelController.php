@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Repository\ProjectRepository;
 use App\Service\Otel\OtelDataService;
+use App\Service\TimeframeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,6 +18,7 @@ class OtelController extends AbstractController
     public function __construct(
         private readonly ProjectRepository $projectRepository,
         private readonly OtelDataService $otelDataService,
+        private readonly TimeframeService $timeframeService,
     ) {
     }
 
@@ -25,16 +27,15 @@ class OtelController extends AbstractController
     {
         $project = $this->getProjectOrFail($publicId);
 
-        $from = $this->parseDateParam($request->query->get('from'));
-        $to = $this->parseDateParam($request->query->get('to'));
+        $timeframe = $this->timeframeService->resolveTimeframe($request);
         $page = max(1, (int) $request->query->get('page', '1'));
         $limit = 50;
         $offset = ($page - 1) * $limit;
 
         $traces = $this->otelDataService->getTraces(
             $project->getPublicId()->toRfc4122(),
-            $from,
-            $to,
+            $timeframe->from,
+            $timeframe->to,
             $limit,
             $offset
         );
@@ -43,10 +44,7 @@ class OtelController extends AbstractController
             'project' => $project,
             'traces' => $traces,
             'page' => $page,
-            'filters' => [
-                'from' => $request->query->get('from'),
-                'to' => $request->query->get('to'),
-            ],
+            'timeframe' => $timeframe,
         ]);
     }
 
@@ -96,8 +94,7 @@ class OtelController extends AbstractController
     {
         $project = $this->getProjectOrFail($publicId);
 
-        $from = $this->parseDateParam($request->query->get('from'));
-        $to = $this->parseDateParam($request->query->get('to'));
+        $timeframe = $this->timeframeService->resolveTimeframe($request);
         $severity = $request->query->get('severity');
         $search = $request->query->get('search');
         $page = max(1, (int) $request->query->get('page', '1'));
@@ -106,8 +103,8 @@ class OtelController extends AbstractController
 
         $logs = $this->otelDataService->getLogs(
             $project->getPublicId()->toRfc4122(),
-            $from,
-            $to,
+            $timeframe->from,
+            $timeframe->to,
             $severity,
             $search,
             $limit,
@@ -118,9 +115,8 @@ class OtelController extends AbstractController
             'project' => $project,
             'logs' => $logs,
             'page' => $page,
+            'timeframe' => $timeframe,
             'filters' => [
-                'from' => $request->query->get('from'),
-                'to' => $request->query->get('to'),
                 'severity' => $severity,
                 'search' => $search,
             ],
@@ -152,8 +148,7 @@ class OtelController extends AbstractController
     {
         $project = $this->getProjectOrFail($publicId);
 
-        $from = $this->parseDateParam($request->query->get('from'));
-        $to = $this->parseDateParam($request->query->get('to'));
+        $timeframe = $this->timeframeService->resolveTimeframe($request);
         $metricName = $request->query->get('metric');
         $page = max(1, (int) $request->query->get('page', '1'));
         $limit = 50;
@@ -161,8 +156,8 @@ class OtelController extends AbstractController
 
         $metrics = $this->otelDataService->getMetrics(
             $project->getPublicId()->toRfc4122(),
-            $from,
-            $to,
+            $timeframe->from,
+            $timeframe->to,
             $metricName,
             $limit,
             $offset
@@ -177,9 +172,8 @@ class OtelController extends AbstractController
             'metrics' => $metrics,
             'metric_names' => $metricNames,
             'page' => $page,
+            'timeframe' => $timeframe,
             'filters' => [
-                'from' => $request->query->get('from'),
-                'to' => $request->query->get('to'),
                 'metric' => $metricName,
             ],
         ]);
@@ -199,18 +193,5 @@ class OtelController extends AbstractController
         }
 
         return $project;
-    }
-
-    private function parseDateParam(?string $value): ?\DateTimeInterface
-    {
-        if (null === $value || '' === $value) {
-            return null;
-        }
-
-        try {
-            return new \DateTimeImmutable($value);
-        } catch (\Exception) {
-            return null;
-        }
     }
 }
