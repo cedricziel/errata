@@ -6,7 +6,7 @@
  */
 
 import { trace, context } from '@opentelemetry/api';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
@@ -76,7 +76,7 @@ function initTracing() {
     console.debug('[OTel] Initializing tracing...');
 
     // Create resource with service information
-    const resource = new Resource({
+    const resource = resourceFromAttributes({
         [ATTR_SERVICE_NAME]: config.serviceName,
         [ATTR_SERVICE_VERSION]: config.serviceVersion,
     });
