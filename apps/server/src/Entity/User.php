@@ -24,20 +24,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 180, unique: true)]
-    private ?string $email = null;
+    private string $email = '';
 
     /** @var array<string> */
     #[ORM\Column(type: Types::JSON)]
     private array $roles = [];
 
     #[ORM\Column(type: Types::STRING)]
-    private ?string $password = null;
+    private string $password = '';
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeImmutable $createdAt = null;
+    private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
@@ -57,7 +57,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->id;
     }
 
-    public function getEmail(): ?string
+    public function getEmail(): string
     {
         return $this->email;
     }
@@ -91,7 +91,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getPassword(): ?string
+    public function getPassword(): string
     {
         return $this->password;
     }
@@ -120,7 +120,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
@@ -162,11 +162,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeProject(Project $project): static
     {
-        if ($this->projects->removeElement($project)) {
-            if ($project->getOwner() === $this) {
-                $project->setOwner(null);
-            }
-        }
+        // orphanRemoval: true will handle deletion when removed from collection
+        $this->projects->removeElement($project);
 
         return $this;
     }

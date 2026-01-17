@@ -27,14 +27,14 @@ class ApiKey
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 64, unique: true)]
-    private ?string $keyHash = null;
+    private string $keyHash = '';
 
     #[ORM\Column(type: Types::STRING, length: 12)]
-    private ?string $keyPrefix = null;
+    private string $keyPrefix = '';
 
     #[ORM\ManyToOne(inversedBy: 'apiKeys')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Project $project = null;
+    private Project $project;
 
     /** @var array<string> */
     #[ORM\Column(type: Types::JSON)]
@@ -56,7 +56,7 @@ class ApiKey
     private ?\DateTimeImmutable $lastUsedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeImmutable $createdAt = null;
+    private \DateTimeImmutable $createdAt;
 
     public function __construct()
     {
@@ -68,7 +68,7 @@ class ApiKey
         return $this->id;
     }
 
-    public function getKeyHash(): ?string
+    public function getKeyHash(): string
     {
         return $this->keyHash;
     }
@@ -80,7 +80,7 @@ class ApiKey
         return $this;
     }
 
-    public function getKeyPrefix(): ?string
+    public function getKeyPrefix(): string
     {
         return $this->keyPrefix;
     }
@@ -92,12 +92,12 @@ class ApiKey
         return $this;
     }
 
-    public function getProject(): ?Project
+    public function getProject(): Project
     {
         return $this->project;
     }
 
-    public function setProject(?Project $project): static
+    public function setProject(Project $project): static
     {
         $this->project = $project;
 
@@ -197,7 +197,7 @@ class ApiKey
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }

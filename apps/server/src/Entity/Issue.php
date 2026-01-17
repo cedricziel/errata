@@ -36,10 +36,10 @@ class Issue
 
     #[ORM\ManyToOne(inversedBy: 'issues')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Project $project = null;
+    private Project $project;
 
     #[ORM\Column(type: Types::STRING, length: 64)]
-    private ?string $fingerprint = null;
+    private string $fingerprint = '';
 
     #[ORM\Column(type: Types::STRING, length: 20)]
     private string $type = self::TYPE_ERROR;
@@ -48,7 +48,7 @@ class Issue
     private string $status = self::STATUS_OPEN;
 
     #[ORM\Column(type: Types::STRING, length: 255)]
-    private ?string $title = null;
+    private string $title = '';
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $culprit = null;
@@ -63,10 +63,10 @@ class Issue
     private int $affectedUsers = 0;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeImmutable $firstSeenAt = null;
+    private \DateTimeImmutable $firstSeenAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeImmutable $lastSeenAt = null;
+    private \DateTimeImmutable $lastSeenAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $resolvedAt = null;
@@ -99,19 +99,19 @@ class Issue
         return $this;
     }
 
-    public function getProject(): ?Project
+    public function getProject(): Project
     {
         return $this->project;
     }
 
-    public function setProject(?Project $project): static
+    public function setProject(Project $project): static
     {
         $this->project = $project;
 
         return $this;
     }
 
-    public function getFingerprint(): ?string
+    public function getFingerprint(): string
     {
         return $this->fingerprint;
     }
@@ -153,7 +153,7 @@ class Issue
         return $this;
     }
 
-    public function getTitle(): ?string
+    public function getTitle(): string
     {
         return $this->title;
     }
@@ -228,7 +228,7 @@ class Issue
         return $this;
     }
 
-    public function getFirstSeenAt(): ?\DateTimeImmutable
+    public function getFirstSeenAt(): \DateTimeImmutable
     {
         return $this->firstSeenAt;
     }
@@ -240,7 +240,7 @@ class Issue
         return $this;
     }
 
-    public function getLastSeenAt(): ?\DateTimeImmutable
+    public function getLastSeenAt(): \DateTimeImmutable
     {
         return $this->lastSeenAt;
     }

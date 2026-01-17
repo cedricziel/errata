@@ -4,7 +4,3 @@ parameters:
         - src
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
-    ignoreErrors:
-        # Doctrine entity properties are initialized before persist
-        - identifier: doctrine.columnType
-        - identifier: doctrine.associationType

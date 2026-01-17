@@ -25,7 +25,7 @@ class Project
     private ?Uuid $publicId = null;
 
     #[ORM\Column(type: Types::STRING, length: 255)]
-    private ?string $name = null;
+    private string $name = '';
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $bundleIdentifier = null;
@@ -35,10 +35,10 @@ class Project
 
     #[ORM\ManyToOne(inversedBy: 'projects')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?User $owner = null;
+    private User $owner;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeImmutable $createdAt = null;
+    private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
@@ -76,7 +76,7 @@ class Project
         return $this;
     }
 
-    public function getName(): ?string
+    public function getName(): string
     {
         return $this->name;
     }
@@ -112,19 +112,19 @@ class Project
         return $this;
     }
 
-    public function getOwner(): ?User
+    public function getOwner(): User
     {
         return $this->owner;
     }
 
-    public function setOwner(?User $owner): static
+    public function setOwner(User $owner): static
     {
         $this->owner = $owner;
 
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
@@ -166,11 +166,8 @@ class Project
 
     public function removeApiKey(ApiKey $apiKey): static
     {
-        if ($this->apiKeys->removeElement($apiKey)) {
-            if ($apiKey->getProject() === $this) {
-                $apiKey->setProject(null);
-            }
-        }
+        // orphanRemoval: true will handle deletion when removed from collection
+        $this->apiKeys->removeElement($apiKey);
 
         return $this;
     }
@@ -193,11 +190,8 @@ class Project
 
     public function removeIssue(Issue $issue): static
     {
-        if ($this->issues->removeElement($issue)) {
-            if ($issue->getProject() === $this) {
-                $issue->setProject(null);
-            }
-        }
+        // orphanRemoval: true will handle deletion when removed from collection
+        $this->issues->removeElement($issue);
 
         return $this;
     }

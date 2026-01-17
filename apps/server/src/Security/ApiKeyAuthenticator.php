@@ -64,11 +64,7 @@ class ApiKeyAuthenticator extends AbstractAuthenticator
         $this->apiKeyRepository->updateLastUsed($apiKey);
 
         // Create a passport with the project owner as the user
-        $user = $apiKey->getProject()?->getOwner();
-
-        if (null === $user) {
-            throw new CustomUserMessageAuthenticationException('Project has no owner');
-        }
+        $user = $apiKey->getProject()->getOwner();
 
         return new SelfValidatingPassport(
             new UserBadge($user->getUserIdentifier(), fn () => $user)
