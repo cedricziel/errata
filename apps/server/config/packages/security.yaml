@@ -15,6 +15,11 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
+        # Worker endpoint uses its own secret-based authentication
+        worker:
+            pattern: ^/api/worker/
+            security: false
+
         # API firewall for event ingestion
         api:
             pattern: ^/api/
