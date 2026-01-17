@@ -21,7 +21,7 @@ class FacetAggregationService
     }
 
     /**
-     * Compute facets from a set of events.
+     * Compute facets from a set of events (legacy method, kept for backward compatibility).
      *
      * @param array<array<string, mixed>> $events
      * @param array<QueryFilter>          $activeFilters
@@ -32,16 +32,68 @@ class FacetAggregationService
     {
         $facetableAttributes = $this->attributeMetadata->getFacetableAttributes();
         $activeFilterValues = $this->extractActiveFilterValues($activeFilters);
+
+        // Compute all facet counts in a single pass
+        $facetCounts = [];
+        foreach ($facetableAttributes as $attr => $_) {
+            $facetCounts[$attr] = [];
+        }
+
+        foreach ($events as $event) {
+            foreach ($facetableAttributes as $attr => $_) {
+                $value = $event[$attr] ?? null;
+                if (null !== $value && '' !== $value) {
+                    $stringValue = (string) $value;
+                    $facetCounts[$attr][$stringValue] = ($facetCounts[$attr][$stringValue] ?? 0) + 1;
+                }
+            }
+        }
+
+        return $this->computeFacetsFromCounts($facetCounts, $activeFilters);
+    }
+
+    /**
+     * Compute facets from pre-computed counts (single-pass optimization).
+     *
+     * @param array<string, array<string, int>> $facetCounts   Map of attribute => [value => count]
+     * @param array<QueryFilter>                $activeFilters
+     *
+     * @return array<Facet>
+     */
+    public function computeFacetsFromCounts(array $facetCounts, array $activeFilters = []): array
+    {
+        $facetableAttributes = $this->attributeMetadata->getFacetableAttributes();
+        $activeFilterValues = $this->extractActiveFilterValues($activeFilters);
         $facets = [];
 
         foreach ($facetableAttributes as $attribute => $meta) {
-            $facets[] = $this->computeFacet(
-                events: $events,
+            $counts = $facetCounts[$attribute] ?? [];
+
+            // Sort by count descending
+            arsort($counts);
+
+            // Create facet values
+            $values = [];
+            foreach ($counts as $value => $count) {
+                $isSelected = $this->isValueSelected((string) $value, $activeFilterValues[$attribute] ?? null);
+
+                $values[] = new FacetValue(
+                    value: (string) $value,
+                    count: $count,
+                    selected: $isSelected,
+                );
+            }
+
+            // Limit the number of values for display
+            $displayValues = array_slice($values, 0, self::MAX_FACET_VALUES);
+
+            $facets[] = new Facet(
                 attribute: $attribute,
                 label: $meta['label'],
-                facetType: $meta['facetType'],
+                type: $meta['facetType'],
+                values: $displayValues,
                 expanded: $meta['facetExpanded'],
-                activeValue: $activeFilterValues[$attribute] ?? null,
+                totalCount: count($values),
             );
         }
 
@@ -49,59 +101,29 @@ class FacetAggregationService
     }
 
     /**
-     * Compute a single facet.
+     * Create empty facets with no values (for when there are no results).
      *
-     * @param array<array<string, mixed>> $events
-     * @param string|array<string>|null   $activeValue
+     * @param array<QueryFilter> $activeFilters
+     *
+     * @return array<Facet>
      */
-    private function computeFacet(
-        array $events,
-        string $attribute,
-        string $label,
-        string $facetType,
-        bool $expanded,
-        string|array|null $activeValue = null,
-    ): Facet {
-        // Count occurrences of each value
-        $counts = [];
-        foreach ($events as $event) {
-            $value = $event[$attribute] ?? null;
-            if (null === $value || '' === $value) {
-                continue;
-            }
+    public function createEmptyFacets(array $activeFilters = []): array
+    {
+        $facetableAttributes = $this->attributeMetadata->getFacetableAttributes();
+        $facets = [];
 
-            $stringValue = (string) $value;
-            $counts[$stringValue] = ($counts[$stringValue] ?? 0) + 1;
-        }
-
-        // Sort by count descending
-        arsort($counts);
-
-        // Create facet values
-        $values = [];
-        $totalCount = 0;
-        foreach ($counts as $value => $count) {
-            $isSelected = $this->isValueSelected($value, $activeValue);
-
-            $values[] = new FacetValue(
-                value: (string) $value,
-                count: $count,
-                selected: $isSelected,
+        foreach ($facetableAttributes as $attribute => $meta) {
+            $facets[] = new Facet(
+                attribute: $attribute,
+                label: $meta['label'],
+                type: $meta['facetType'],
+                values: [],
+                expanded: $meta['facetExpanded'],
+                totalCount: 0,
             );
-            $totalCount += $count;
         }
 
-        // Limit the number of values for display (but keep track of total)
-        $displayValues = array_slice($values, 0, self::MAX_FACET_VALUES);
-
-        return new Facet(
-            attribute: $attribute,
-            label: $label,
-            type: $facetType,
-            values: $displayValues,
-            expanded: $expanded,
-            totalCount: count($values),
-        );
+        return $facets;
     }
 
     /**

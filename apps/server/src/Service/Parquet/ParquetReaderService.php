@@ -78,6 +78,67 @@ class ParquetReaderService
     }
 
     /**
+     * Read events from multiple Parquet files with column pruning.
+     *
+     * This method is optimized for single-pass processing:
+     * - Only reads the specified columns from Parquet files
+     * - Applies filters during iteration
+     * - Returns a generator for memory efficiency
+     *
+     * @param array<string>                            $files   List of Parquet file paths
+     * @param array<string>                            $columns Columns to read (for pruning)
+     * @param array<\App\DTO\QueryBuilder\QueryFilter> $filters Filters to apply
+     *
+     * @return \Generator<array<string, mixed>>
+     */
+    public function readEventsWithColumns(array $files, array $columns, array $filters = []): \Generator
+    {
+        foreach ($files as $filePath) {
+            yield from $this->readFileWithColumns($filePath, $columns, $filters);
+        }
+    }
+
+    /**
+     * Read events from a specific Parquet file with column pruning.
+     *
+     * @param array<string>                            $columns Columns to read
+     * @param array<\App\DTO\QueryBuilder\QueryFilter> $filters Filters to apply
+     *
+     * @return \Generator<array<string, mixed>>
+     */
+    public function readFileWithColumns(string $filePath, array $columns, array $filters = []): \Generator
+    {
+        if (!file_exists($filePath)) {
+            $this->logger->warning('Parquet file not found', ['file' => $filePath]);
+
+            return;
+        }
+
+        try {
+            $reader = new Reader();
+            $parquetFile = $reader->read($filePath);
+
+            // Use column pruning if columns are specified
+            $valueIterator = !empty($columns)
+                ? $parquetFile->values($columns)
+                : $parquetFile->values();
+
+            foreach ($valueIterator as $row) {
+                $event = $this->rowToEvent($row);
+
+                if ($this->matchesFilters($event, $filters)) {
+                    yield $event;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to read Parquet file', [
+                'file' => $filePath,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Count events with Hive-style partition filtering.
      *
      * @param array<\App\DTO\QueryBuilder\QueryFilter> $filters
