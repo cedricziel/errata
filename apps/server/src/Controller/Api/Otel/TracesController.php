@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller\Api\Otel;
 
-use App\DTO\Otel\Trace\ExportTraceServiceRequest;
 use App\Message\ProcessEvent;
 use App\Security\ApiKeyAuthenticator;
 use App\Service\Otel\TraceMapper;
+use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceRequest;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -53,9 +53,7 @@ class TracesController extends AbstractController
         }
 
         $content = $request->getContent();
-        $data = json_decode($content, true);
-
-        if (!is_array($data)) {
+        if ('' === $content || !$this->isValidJson($content)) {
             return new JsonResponse([
                 'error' => 'bad_request',
                 'message' => 'Invalid JSON payload',
@@ -63,7 +61,8 @@ class TracesController extends AbstractController
         }
 
         try {
-            $traceRequest = ExportTraceServiceRequest::fromArray($data);
+            $traceRequest = new ExportTraceServiceRequest();
+            $traceRequest->mergeFromJsonString($content);
         } catch (\Throwable $e) {
             return new JsonResponse([
                 'error' => 'bad_request',
@@ -85,5 +84,15 @@ class TracesController extends AbstractController
         return new JsonResponse([
             'partialSuccess' => new \stdClass(),
         ], Response::HTTP_OK);
+    }
+
+    /**
+     * Check if string is valid JSON.
+     */
+    private function isValidJson(string $content): bool
+    {
+        json_decode($content, true);
+
+        return JSON_ERROR_NONE === json_last_error();
     }
 }

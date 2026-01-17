@@ -181,8 +181,8 @@ class LogsControllerTest extends AbstractIntegrationTestCase
                                     'body' => [
                                         'stringValue' => 'Log with trace context',
                                     ],
-                                    'traceId' => '5b8efff798038103d269b633813fc60c',
-                                    'spanId' => '6364652d65373139',
+                                    'traceId' => base64_encode(hex2bin('5b8efff798038103d269b633813fc60c')),
+                                    'spanId' => base64_encode(hex2bin('6364652d65373139')),
                                 ],
                             ],
                         ],

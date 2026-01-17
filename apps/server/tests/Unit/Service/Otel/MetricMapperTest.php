@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service\Otel;
 
-use App\DTO\Otel\Metrics\ExportMetricsServiceRequest;
 use App\Service\Otel\MetricMapper;
+use Opentelemetry\Proto\Collector\Metrics\V1\ExportMetricsServiceRequest;
 use PHPUnit\Framework\TestCase;
 
 class MetricMapperTest extends TestCase
@@ -55,7 +55,7 @@ class MetricMapperTest extends TestCase
 
     public function testExtractsResourceAttributes(): void
     {
-        $request = ExportMetricsServiceRequest::fromArray([
+        $request = $this->createMetricRequestFromJson([
             'resourceMetrics' => [
                 [
                     'resource' => [
@@ -90,7 +90,7 @@ class MetricMapperTest extends TestCase
 
     public function testMapsDataPointAttributes(): void
     {
-        $request = ExportMetricsServiceRequest::fromArray([
+        $request = $this->createMetricRequestFromJson([
             'resourceMetrics' => [
                 [
                     'scopeMetrics' => [
@@ -124,7 +124,7 @@ class MetricMapperTest extends TestCase
 
     public function testMapsIntValue(): void
     {
-        $request = ExportMetricsServiceRequest::fromArray([
+        $request = $this->createMetricRequestFromJson([
             'resourceMetrics' => [
                 [
                     'scopeMetrics' => [
@@ -134,7 +134,7 @@ class MetricMapperTest extends TestCase
                                     'name' => 'connections.active',
                                     'gauge' => [
                                         'dataPoints' => [
-                                            ['timeUnixNano' => '1000000000000', 'asInt' => 42],
+                                            ['timeUnixNano' => '1000000000000', 'asInt' => '42'],
                                         ],
                                     ],
                                 ],
@@ -152,7 +152,7 @@ class MetricMapperTest extends TestCase
 
     private function createGaugeMetricRequest(): ExportMetricsServiceRequest
     {
-        return ExportMetricsServiceRequest::fromArray([
+        return $this->createMetricRequestFromJson([
             'resourceMetrics' => [
                 [
                     'scopeMetrics' => [
@@ -177,7 +177,7 @@ class MetricMapperTest extends TestCase
 
     private function createSumMetricRequest(): ExportMetricsServiceRequest
     {
-        return ExportMetricsServiceRequest::fromArray([
+        return $this->createMetricRequestFromJson([
             'resourceMetrics' => [
                 [
                     'scopeMetrics' => [
@@ -189,7 +189,7 @@ class MetricMapperTest extends TestCase
                                         'aggregationTemporality' => 2,
                                         'isMonotonic' => true,
                                         'dataPoints' => [
-                                            ['timeUnixNano' => '1000000000000', 'asInt' => 1000],
+                                            ['timeUnixNano' => '1000000000000', 'asInt' => '1000'],
                                         ],
                                     ],
                                 ],
@@ -203,7 +203,7 @@ class MetricMapperTest extends TestCase
 
     private function createHistogramMetricRequest(): ExportMetricsServiceRequest
     {
-        return ExportMetricsServiceRequest::fromArray([
+        return $this->createMetricRequestFromJson([
             'resourceMetrics' => [
                 [
                     'scopeMetrics' => [
@@ -217,12 +217,12 @@ class MetricMapperTest extends TestCase
                                         'dataPoints' => [
                                             [
                                                 'timeUnixNano' => '1000000000000',
-                                                'count' => 100,
+                                                'count' => '100',
                                                 'sum' => 5000.0,
                                                 'min' => 10.0,
                                                 'max' => 200.0,
-                                                'bucketCounts' => [10, 30, 40, 15, 5],
-                                                'explicitBounds' => [25, 50, 100, 150],
+                                                'bucketCounts' => ['10', '30', '40', '15', '5'],
+                                                'explicitBounds' => [25.0, 50.0, 100.0, 150.0],
                                             ],
                                         ],
                                     ],
@@ -233,5 +233,16 @@ class MetricMapperTest extends TestCase
                 ],
             ],
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function createMetricRequestFromJson(array $data): ExportMetricsServiceRequest
+    {
+        $request = new ExportMetricsServiceRequest();
+        $request->mergeFromJsonString(json_encode($data, JSON_THROW_ON_ERROR));
+
+        return $request;
     }
 }

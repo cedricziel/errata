@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service\Otel;
 
-use App\DTO\Otel\Logs\ExportLogsServiceRequest;
 use App\Service\Otel\LogMapper;
+use Opentelemetry\Proto\Collector\Logs\V1\ExportLogsServiceRequest;
 use PHPUnit\Framework\TestCase;
 
 class LogMapperTest extends TestCase
@@ -61,7 +61,7 @@ class LogMapperTest extends TestCase
 
     public function testExtractsExceptionAttributes(): void
     {
-        $request = ExportLogsServiceRequest::fromArray([
+        $request = $this->createLogRequestFromJson([
             'resourceLogs' => [
                 [
                     'scopeLogs' => [
@@ -90,7 +90,7 @@ class LogMapperTest extends TestCase
 
     public function testExtractsResourceAttributes(): void
     {
-        $request = ExportLogsServiceRequest::fromArray([
+        $request = $this->createLogRequestFromJson([
             'resourceLogs' => [
                 [
                     'resource' => [
@@ -123,9 +123,10 @@ class LogMapperTest extends TestCase
 
     public function testNormalizesTraceIdToLowercase(): void
     {
+        // Hex strings are already lowercase after bin2hex conversion
         $request = $this->createLogRequestWithTraceContext(
-            '5B8EFFF798038103D269B633813FC60C',
-            '6364652D65373139'
+            '5b8efff798038103d269b633813fc60c',
+            '6364652d65373139'
         );
 
         $events = iterator_to_array($this->mapper->mapToEvents($request));
@@ -136,7 +137,7 @@ class LogMapperTest extends TestCase
 
     private function createLogRequest(): ExportLogsServiceRequest
     {
-        return ExportLogsServiceRequest::fromArray([
+        return $this->createLogRequestFromJson([
             'resourceLogs' => [
                 [
                     'scopeLogs' => [
@@ -167,7 +168,7 @@ class LogMapperTest extends TestCase
             $logRecord['severityText'] = $text;
         }
 
-        return ExportLogsServiceRequest::fromArray([
+        return $this->createLogRequestFromJson([
             'resourceLogs' => [
                 [
                     'scopeLogs' => [
@@ -182,7 +183,7 @@ class LogMapperTest extends TestCase
 
     private function createLogRequestWithTraceContext(string $traceId, string $spanId): ExportLogsServiceRequest
     {
-        return ExportLogsServiceRequest::fromArray([
+        return $this->createLogRequestFromJson([
             'resourceLogs' => [
                 [
                     'scopeLogs' => [
@@ -191,8 +192,8 @@ class LogMapperTest extends TestCase
                                 [
                                     'timeUnixNano' => '1000000000000',
                                     'body' => ['stringValue' => 'Test'],
-                                    'traceId' => $traceId,
-                                    'spanId' => $spanId,
+                                    'traceId' => $this->hexToBase64($traceId),
+                                    'spanId' => $this->hexToBase64($spanId),
                                 ],
                             ],
                         ],
@@ -200,5 +201,25 @@ class LogMapperTest extends TestCase
                 ],
             ],
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function createLogRequestFromJson(array $data): ExportLogsServiceRequest
+    {
+        $request = new ExportLogsServiceRequest();
+        $request->mergeFromJsonString(json_encode($data, JSON_THROW_ON_ERROR));
+
+        return $request;
+    }
+
+    /**
+     * Convert hex string to base64 for protobuf JSON encoding.
+     * Protobuf uses base64 encoding for bytes fields in JSON.
+     */
+    private function hexToBase64(string $hex): string
+    {
+        return base64_encode(hex2bin($hex));
     }
 }

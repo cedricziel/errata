@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Otel;
 
-use App\DTO\Otel\Common\Resource;
-use App\DTO\Otel\Trace\ExportTraceServiceRequest;
-use App\DTO\Otel\Trace\Span;
+use Google\Protobuf\Internal\RepeatedField;
+use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceRequest;
+use Opentelemetry\Proto\Common\V1\InstrumentationScope;
+use Opentelemetry\Proto\Resource\V1\Resource;
+use Opentelemetry\Proto\Trace\V1\Span;
+use Opentelemetry\Proto\Trace\V1\Span\SpanKind;
+use Opentelemetry\Proto\Trace\V1\Status\StatusCode;
 
 /**
  * Maps OTLP traces to WideEventPayload format.
@@ -20,14 +24,14 @@ class TraceMapper
      */
     public function mapToEvents(ExportTraceServiceRequest $request): iterable
     {
-        foreach ($request->resourceSpans as $resourceSpans) {
-            $resource = $resourceSpans->resource;
+        foreach ($request->getResourceSpans() as $resourceSpans) {
+            $resource = $resourceSpans->getResource();
 
-            foreach ($resourceSpans->scopeSpans as $scopeSpans) {
-                $scope = $scopeSpans->scope;
+            foreach ($resourceSpans->getScopeSpans() as $scopeSpans) {
+                $scope = $scopeSpans->getScope();
 
-                foreach ($scopeSpans->spans as $span) {
-                    yield $this->mapSpanToEvent($span, $resource, $scope?->name);
+                foreach ($scopeSpans->getSpans() as $span) {
+                    yield $this->mapSpanToEvent($span, $resource, $scope);
                 }
             }
         }
@@ -38,43 +42,57 @@ class TraceMapper
      *
      * @return array<string, mixed>
      */
-    private function mapSpanToEvent(Span $span, ?Resource $resource, ?string $scopeName): array
+    private function mapSpanToEvent(Span $span, ?Resource $resource, ?InstrumentationScope $scope): array
     {
+        $traceId = ProtobufHelper::binToHex($span->getTraceId());
+        $spanId = ProtobufHelper::binToHex($span->getSpanId());
+        $parentSpanId = ProtobufHelper::binToHex($span->getParentSpanId());
+
+        $startNano = $span->getStartTimeUnixNano();
+        $endNano = $span->getEndTimeUnixNano();
+        $durationMs = $this->calculateDurationMs($startNano, $endNano);
+
+        $status = $span->getStatus();
+        $statusCode = $status?->getCode() ?? StatusCode::STATUS_CODE_UNSET;
+
         $event = [
             'event_type' => 'span',
-            'trace_id' => $span->traceId,
-            'span_id' => $span->spanId,
-            'parent_span_id' => $span->parentSpanId,
-            'operation' => $span->name,
-            'duration_ms' => $span->getDurationMs(),
-            'span_status' => $span->status?->getStatusString() ?? 'unset',
-            'timestamp' => (int) $span->getStartTimestampMs(),
+            'trace_id' => $traceId,
+            'span_id' => $spanId,
+            'parent_span_id' => '' !== $parentSpanId ? $parentSpanId : null,
+            'operation' => $span->getName(),
+            'duration_ms' => $durationMs,
+            'span_status' => $this->mapStatusCode($statusCode),
+            'timestamp' => (int) ($startNano / 1_000_000),
         ];
 
         if (null !== $resource) {
-            $this->mapResourceAttributes($event, $resource);
+            $this->mapResourceAttributes($event, $resource->getAttributes());
         }
 
+        $scopeName = $scope?->getName();
         if (null !== $scopeName && '' !== $scopeName) {
             $event['context']['instrumentation_scope'] = $scopeName;
         }
 
-        $spanAttrs = $span->getAttributesAsArray();
+        $spanAttrs = ProtobufHelper::attributesToArray($span->getAttributes());
         if (!empty($spanAttrs)) {
             $event['tags'] = array_merge($event['tags'] ?? [], $spanAttrs);
         }
 
-        if (!empty($span->events)) {
-            $event['breadcrumbs'] = $span->getEventsAsArray();
+        $spanEvents = $span->getEvents();
+        if ($spanEvents->count() > 0) {
+            $event['breadcrumbs'] = $this->mapSpanEvents($spanEvents);
         }
 
-        $event['context']['span_kind'] = $span->getKindString();
+        $event['context']['span_kind'] = $this->mapSpanKind($span->getKind());
 
-        if ($span->status?->message) {
-            $event['message'] = $span->status->message;
+        $statusMessage = $status?->getMessage();
+        if (null !== $statusMessage && '' !== $statusMessage) {
+            $event['message'] = $statusMessage;
         }
 
-        if (2 === $span->status?->code) {
+        if (StatusCode::STATUS_CODE_ERROR === $statusCode) {
             $event['severity'] = 'error';
         }
 
@@ -82,43 +100,100 @@ class TraceMapper
     }
 
     /**
+     * Calculate duration in milliseconds from nanosecond timestamps.
+     */
+    private function calculateDurationMs(int|string $startNano, int|string $endNano): float
+    {
+        return ((int) $endNano - (int) $startNano) / 1_000_000;
+    }
+
+    /**
+     * Map status code to string.
+     */
+    private function mapStatusCode(int $code): string
+    {
+        return match ($code) {
+            StatusCode::STATUS_CODE_OK => 'ok',
+            StatusCode::STATUS_CODE_ERROR => 'error',
+            default => 'unset',
+        };
+    }
+
+    /**
+     * Map span kind to string.
+     */
+    private function mapSpanKind(int $kind): string
+    {
+        return match ($kind) {
+            SpanKind::SPAN_KIND_CLIENT => 'client',
+            SpanKind::SPAN_KIND_SERVER => 'server',
+            SpanKind::SPAN_KIND_PRODUCER => 'producer',
+            SpanKind::SPAN_KIND_CONSUMER => 'consumer',
+            SpanKind::SPAN_KIND_INTERNAL => 'internal',
+            default => 'unspecified',
+        };
+    }
+
+    /**
+     * Map span events to breadcrumbs array.
+     *
+     * @param RepeatedField<Span\Event> $events
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapSpanEvents(RepeatedField $events): array
+    {
+        $breadcrumbs = [];
+        foreach ($events as $event) {
+            $breadcrumbs[] = [
+                'name' => $event->getName(),
+                'timestamp_ms' => (int) ($event->getTimeUnixNano() / 1_000_000),
+                'attributes' => ProtobufHelper::attributesToArray($event->getAttributes()),
+            ];
+        }
+
+        return $breadcrumbs;
+    }
+
+    /**
      * Map resource attributes to event fields.
      *
-     * @param array<string, mixed> $event
+     * @param array<string, mixed>                                   $event
+     * @param RepeatedField<\Opentelemetry\Proto\Common\V1\KeyValue> $attributes
      */
-    private function mapResourceAttributes(array &$event, Resource $resource): void
+    private function mapResourceAttributes(array &$event, RepeatedField $attributes): void
     {
-        $serviceName = $resource->getAttribute('service.name');
+        $serviceName = ProtobufHelper::getAttribute($attributes, 'service.name');
         if (null !== $serviceName) {
             $event['bundle_id'] = (string) $serviceName;
         }
 
-        $serviceVersion = $resource->getAttribute('service.version');
+        $serviceVersion = ProtobufHelper::getAttribute($attributes, 'service.version');
         if (null !== $serviceVersion) {
             $event['app_version'] = (string) $serviceVersion;
         }
 
-        $osType = $resource->getAttribute('os.type');
+        $osType = ProtobufHelper::getAttribute($attributes, 'os.type');
         if (null !== $osType) {
             $event['os_name'] = (string) $osType;
         }
 
-        $osVersion = $resource->getAttribute('os.version');
+        $osVersion = ProtobufHelper::getAttribute($attributes, 'os.version');
         if (null !== $osVersion) {
             $event['os_version'] = (string) $osVersion;
         }
 
-        $deviceModelIdentifier = $resource->getAttribute('device.model.identifier');
+        $deviceModelIdentifier = ProtobufHelper::getAttribute($attributes, 'device.model.identifier');
         if (null !== $deviceModelIdentifier) {
             $event['device_model'] = (string) $deviceModelIdentifier;
         }
 
-        $deviceId = $resource->getAttribute('device.id');
+        $deviceId = ProtobufHelper::getAttribute($attributes, 'device.id');
         if (null !== $deviceId) {
             $event['device_id'] = (string) $deviceId;
         }
 
-        $envName = $resource->getAttribute('deployment.environment');
+        $envName = ProtobufHelper::getAttribute($attributes, 'deployment.environment');
         if (null !== $envName) {
             $env = (string) $envName;
             if (in_array($env, ['production', 'staging', 'development'], true)) {
@@ -126,7 +201,7 @@ class TraceMapper
             }
         }
 
-        $allAttrs = $resource->getAttributesAsArray();
+        $allAttrs = ProtobufHelper::attributesToArray($attributes);
         $mappedKeys = [
             'service.name',
             'service.version',
