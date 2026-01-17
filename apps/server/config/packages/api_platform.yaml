@@ -1,0 +1,15 @@
+api_platform:
+    title: 'Errata API'
+    description: 'Event monitoring and OpenTelemetry ingestion'
+    version: '1.0.0'
+    defaults:
+        stateless: true
+    formats:
+        json:
+            mime_types: ['application/json']
+    enable_swagger_ui: true
+    swagger:
+        api_keys:
+            ApiKeyAuth:
+                name: X-Errata-Key
+                type: header

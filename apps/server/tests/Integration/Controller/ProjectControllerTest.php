@@ -106,7 +106,7 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 
         $this->loginUser($user);
 
-        $this->client->request('GET', '/projects/' . $project->getPublicId()->toRfc4122());
+        $this->client->request('GET', '/projects/'.$project->getPublicId()->toRfc4122());
 
         $this->assertResponseIsSuccessful();
         $this->assertSelectorTextContains('body', 'Detail Test Project');
@@ -122,7 +122,7 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         // Login as user2
         $this->loginUser($user2);
 
-        $this->client->request('GET', '/projects/' . $project->getPublicId()->toRfc4122());
+        $this->client->request('GET', '/projects/'.$project->getPublicId()->toRfc4122());
 
         $this->assertResponseStatusCodeSame(403);
     }
@@ -134,13 +134,13 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 
         $this->loginUser($user);
 
-        $this->client->request('POST', '/projects/' . $project->getPublicId()->toRfc4122() . '/edit', [
+        $this->client->request('POST', '/projects/'.$project->getPublicId()->toRfc4122().'/edit', [
             'name' => 'Updated Name',
             'bundle_identifier' => 'com.example.updated',
             'platform' => 'android',
         ]);
 
-        $this->assertResponseRedirects('/projects/' . $project->getPublicId()->toRfc4122());
+        $this->assertResponseRedirects('/projects/'.$project->getPublicId()->toRfc4122());
 
         // Verify project was updated
         $this->entityManager->refresh($project);
@@ -158,14 +158,14 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 
         $this->client->request(
             'POST',
-            '/projects/' . $project->getPublicId()->toRfc4122() . '/keys/new',
+            '/projects/'.$project->getPublicId()->toRfc4122().'/keys/new',
             [
                 'label' => 'Production Key',
                 'environment' => ApiKey::ENV_PRODUCTION,
             ]
         );
 
-        $this->assertResponseRedirects('/projects/' . $project->getPublicId()->toRfc4122());
+        $this->assertResponseRedirects('/projects/'.$project->getPublicId()->toRfc4122());
 
         // Verify API key was created
         $apiKeys = $this->apiKeyRepository->findByProject($project);
@@ -186,10 +186,10 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 
         $this->client->request(
             'POST',
-            '/projects/' . $project->getPublicId()->toRfc4122() . '/keys/' . $keyData['apiKey']->getId() . '/revoke'
+            '/projects/'.$project->getPublicId()->toRfc4122().'/keys/'.$keyData['apiKey']->getId().'/revoke'
         );
 
-        $this->assertResponseRedirects('/projects/' . $project->getPublicId()->toRfc4122());
+        $this->assertResponseRedirects('/projects/'.$project->getPublicId()->toRfc4122());
 
         // Verify API key was deactivated
         $this->entityManager->refresh($keyData['apiKey']);
@@ -209,7 +209,7 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 
         $this->client->request(
             'POST',
-            '/projects/' . $project->getPublicId()->toRfc4122() . '/keys/' . $keyData['apiKey']->getId() . '/revoke'
+            '/projects/'.$project->getPublicId()->toRfc4122().'/keys/'.$keyData['apiKey']->getId().'/revoke'
         );
 
         $this->assertResponseStatusCodeSame(403);

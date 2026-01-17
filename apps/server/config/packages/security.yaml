@@ -22,6 +22,13 @@ security:
             custom_authenticators:
                 - App\Security\ApiKeyAuthenticator
 
+        # OTLP v1 endpoints firewall
+        otel:
+            pattern: ^/v1/
+            stateless: true
+            custom_authenticators:
+                - App\Security\ApiKeyAuthenticator
+
         # Main firewall for dashboard
         main:
             lazy: true
@@ -45,6 +52,8 @@ security:
         - { path: ^/api/v1/health, roles: PUBLIC_ACCESS }
         # API requires authentication (handled by ApiKeyAuthenticator)
         - { path: ^/api/, roles: IS_AUTHENTICATED_FULLY }
+        # OTLP v1 endpoints require authentication
+        - { path: ^/v1/, roles: IS_AUTHENTICATED_FULLY }
         # Login and registration pages are public
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }

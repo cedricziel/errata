@@ -137,7 +137,7 @@ class IssueController extends AbstractController
         $issue->setStatus($status);
         $this->issueRepository->save($issue, true);
 
-        $this->addFlash('success', 'Issue status updated to ' . ucfirst($status));
+        $this->addFlash('success', 'Issue status updated to '.ucfirst($status));
 
         return $this->redirectToRoute('issue_show', ['publicId' => $publicId]);
     }

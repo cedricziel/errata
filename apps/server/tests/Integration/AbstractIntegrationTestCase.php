@@ -80,7 +80,7 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
     protected function createTestUser(
         string $email = 'test@example.com',
         string $password = 'password123',
-        ?string $name = 'Test User'
+        ?string $name = 'Test User',
     ): User {
         /** @var UserPasswordHasherInterface $passwordHasher */
         $passwordHasher = static::getContainer()->get(UserPasswordHasherInterface::class);
@@ -97,7 +97,7 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
 
     protected function createTestProject(
         User $owner,
-        string $name = 'Test Project'
+        string $name = 'Test Project',
     ): Project {
         $project = new Project();
         $project->setName($name);
@@ -120,7 +120,7 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
         array $scopes = [ApiKey::SCOPE_INGEST],
         string $environment = ApiKey::ENV_DEVELOPMENT,
         bool $active = true,
-        ?\DateTimeImmutable $expiresAt = null
+        ?\DateTimeImmutable $expiresAt = null,
     ): array {
         $keyData = ApiKey::generateKey();
 
@@ -149,7 +149,7 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
         Project $project,
         string $type = Issue::TYPE_ERROR,
         string $status = Issue::STATUS_OPEN,
-        ?string $fingerprint = null
+        ?string $fingerprint = null,
     ): Issue {
         $issue = new Issue();
         $issue->setProject($project);

@@ -145,6 +145,29 @@ class ProjectController extends AbstractController
         ]);
     }
 
+    #[Route('/{publicId}/settings/opentelemetry', name: 'settings_opentelemetry')]
+    public function opentelemetrySettings(string $publicId): Response
+    {
+        $project = $this->projectRepository->findByPublicId($publicId);
+
+        if (null === $project) {
+            throw $this->createNotFoundException('Project not found');
+        }
+
+        // Verify user has access
+        $user = $this->getUser();
+        if ($project->getOwner() !== $user) {
+            throw $this->createAccessDeniedException('You do not have access to this project');
+        }
+
+        $apiKeys = $this->apiKeyRepository->findByProject($project);
+
+        return $this->render('project/settings/opentelemetry.html.twig', [
+            'project' => $project,
+            'apiKeys' => $apiKeys,
+        ]);
+    }
+
     #[Route('/{publicId}/keys/new', name: 'create_key', methods: ['POST'])]
     public function createKey(string $publicId, Request $request): Response
     {

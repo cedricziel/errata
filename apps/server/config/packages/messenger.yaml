@@ -24,3 +24,9 @@ framework:
 
             # Route event processing to async (or sync in dev)
             App\Message\ProcessEvent: async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'test://'

@@ -9,12 +9,12 @@ install:
 
 # Run linting
 lint:
-	cd apps/server && vendor/bin/phpcs src/ --standard=PSR12
+	cd apps/server && vendor/bin/php-cs-fixer fix --dry-run --diff
 	cd apps/server && vendor/bin/phpstan analyse --memory-limit=256M
 
 # Format code
 format:
-	cd apps/server && vendor/bin/php-cs-fixer fix src/ --rules=@Symfony
+	cd apps/server && vendor/bin/php-cs-fixer fix
 
 # Run tests
 test:

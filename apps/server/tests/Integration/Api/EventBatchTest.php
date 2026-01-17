@@ -36,7 +36,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             json_encode(['events' => $events])
         );
@@ -64,7 +64,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             json_encode($events)
         );
@@ -91,7 +91,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             json_encode(['events' => $events])
         );
@@ -118,7 +118,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             json_encode(['events' => $events])
         );
@@ -142,7 +142,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             json_encode(['events' => []])
         );
@@ -162,7 +162,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             'not valid json'
         );
@@ -192,7 +192,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             json_encode(['events' => $events])
         );
@@ -219,7 +219,7 @@ class EventBatchTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
             ],
             json_encode(['events' => $events])
         );

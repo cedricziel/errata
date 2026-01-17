@@ -36,7 +36,7 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => 'invalid_api_key',
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => 'invalid_api_key',
             ],
             json_encode($this->createValidEventPayload())
         );
@@ -67,7 +67,7 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
             ],
             json_encode($this->createValidEventPayload())
         );
@@ -97,7 +97,7 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
             ],
             json_encode($this->createValidEventPayload())
         );
@@ -127,7 +127,7 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
             ],
             json_encode($this->createValidEventPayload())
         );
@@ -152,7 +152,7 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
             ],
             json_encode($this->createValidEventPayload())
         );
@@ -178,7 +178,7 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
             ],
             json_encode($this->createValidEventPayload())
         );
@@ -200,7 +200,7 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_' . str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => '',
+                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => '',
             ],
             json_encode($this->createValidEventPayload())
         );

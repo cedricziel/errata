@@ -69,7 +69,7 @@ class IssueControllerTest extends AbstractIntegrationTestCase
 
         $this->loginUser($user);
 
-        $this->client->request('GET', '/issues/' . $issue->getPublicId()->toRfc4122());
+        $this->client->request('GET', '/issues/'.$issue->getPublicId()->toRfc4122());
 
         $this->assertResponseIsSuccessful();
         $this->assertSelectorTextContains('body', 'Test Issue');
@@ -87,7 +87,7 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $this->loginUser($user2);
 
         // Try to access user1's issue
-        $this->client->request('GET', '/issues/' . $issue->getPublicId()->toRfc4122());
+        $this->client->request('GET', '/issues/'.$issue->getPublicId()->toRfc4122());
 
         $this->assertResponseStatusCodeSame(403);
     }
@@ -112,11 +112,11 @@ class IssueControllerTest extends AbstractIntegrationTestCase
 
         $this->client->request(
             'POST',
-            '/issues/' . $issue->getPublicId()->toRfc4122() . '/status',
+            '/issues/'.$issue->getPublicId()->toRfc4122().'/status',
             ['status' => Issue::STATUS_RESOLVED]
         );
 
-        $this->assertResponseRedirects('/issues/' . $issue->getPublicId()->toRfc4122());
+        $this->assertResponseRedirects('/issues/'.$issue->getPublicId()->toRfc4122());
 
         // Verify issue was updated
         $this->entityManager->refresh($issue);
@@ -133,11 +133,11 @@ class IssueControllerTest extends AbstractIntegrationTestCase
 
         $this->client->request(
             'POST',
-            '/issues/' . $issue->getPublicId()->toRfc4122() . '/status',
+            '/issues/'.$issue->getPublicId()->toRfc4122().'/status',
             ['status' => Issue::STATUS_IGNORED]
         );
 
-        $this->assertResponseRedirects('/issues/' . $issue->getPublicId()->toRfc4122());
+        $this->assertResponseRedirects('/issues/'.$issue->getPublicId()->toRfc4122());
 
         // Verify issue was updated
         $this->entityManager->refresh($issue);
@@ -158,7 +158,7 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         // Try to update user1's issue
         $this->client->request(
             'POST',
-            '/issues/' . $issue->getPublicId()->toRfc4122() . '/status',
+            '/issues/'.$issue->getPublicId()->toRfc4122().'/status',
             ['status' => Issue::STATUS_RESOLVED]
         );
 

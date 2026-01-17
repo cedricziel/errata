@@ -1,0 +1,257 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}OpenTelemetry Settings - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Breadcrumb #}
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol role="list" class="flex items-center space-x-4">
+            <li>
+                <a href="{{ path('project_index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Projects</a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="{{ path('project_show', { publicId: project.publicId }) }}" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">{{ project.name }}</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-4 text-sm font-medium text-gray-500">OpenTelemetry</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    {# Header #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">OpenTelemetry Integration</h2>
+            <p class="mt-1 text-sm text-gray-500">Configure OpenTelemetry to send traces, metrics, and logs to Errata</p>
+        </div>
+    </div>
+
+    {# Endpoint Configuration #}
+    <div class="bg-white shadow rounded-lg endpoint-config">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-base font-medium text-gray-900">OTLP Endpoints</h3>
+            <p class="mt-1 text-sm text-gray-500">Use these standard OTLP HTTP/JSON endpoints to send telemetry data</p>
+        </div>
+        <div class="px-4 py-5 sm:px-6 space-y-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-900">Traces</span>
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">POST</span>
+                    </div>
+                    <code class="mt-2 block text-sm text-gray-600 font-mono break-all">{{ app.request.schemeAndHttpHost }}/v1/traces</code>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-900">Metrics</span>
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">POST</span>
+                    </div>
+                    <code class="mt-2 block text-sm text-gray-600 font-mono break-all">{{ app.request.schemeAndHttpHost }}/v1/metrics</code>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-900">Logs</span>
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">POST</span>
+                    </div>
+                    <code class="mt-2 block text-sm text-gray-600 font-mono break-all">{{ app.request.schemeAndHttpHost }}/v1/logs</code>
+                </div>
+            </div>
+
+            <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            Only <strong>JSON format</strong> is supported. Protobuf requests will return HTTP 415.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# API Key #}
+    <div class="bg-white shadow rounded-lg api-key">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-base font-medium text-gray-900">Authentication</h3>
+            <p class="mt-1 text-sm text-gray-500">Include the X-Errata-Key header in all requests</p>
+        </div>
+        <div class="px-4 py-5 sm:px-6">
+            {% if apiKeys|length > 0 %}
+                {% set activeKey = apiKeys|filter(k => k.isActive)|first %}
+                {% if activeKey %}
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1 bg-gray-100 rounded-md px-4 py-2 font-mono text-sm">
+                            {{ activeKey.keyPrefix }}••••••••
+                        </div>
+                        <a href="{{ path('project_show', { publicId: project.publicId }) }}"
+                           class="text-sm text-indigo-600 hover:text-indigo-500">
+                            View all keys
+                        </a>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">
+                        Your API key is shown partially for security. To view the full key, create a new one in project settings.
+                    </p>
+                {% else %}
+                    <p class="text-sm text-gray-500">No active API keys. <a href="{{ path('project_show', { publicId: project.publicId }) }}" class="text-indigo-600 hover:text-indigo-500">Create one</a> first.</p>
+                {% endif %}
+            {% else %}
+                <p class="text-sm text-gray-500">No API keys configured. <a href="{{ path('project_show', { publicId: project.publicId }) }}" class="text-indigo-600 hover:text-indigo-500">Create one</a> first.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Environment Variables #}
+    <div class="bg-white shadow rounded-lg env-vars">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-base font-medium text-gray-900">Environment Variables</h3>
+            <p class="mt-1 text-sm text-gray-500">Standard OpenTelemetry environment variables for configuration</p>
+        </div>
+        <div class="px-4 py-5 sm:px-6">
+            <div class="bg-gray-900 rounded-md p-4 overflow-x-auto">
+                <pre class="text-sm text-gray-300 font-mono"># OpenTelemetry endpoint configuration
+OTEL_EXPORTER_OTLP_ENDPOINT={{ app.request.schemeAndHttpHost }}
+OTEL_EXPORTER_OTLP_HEADERS="X-Errata-Key=YOUR_API_KEY"
+
+# Optional: Set protocol to JSON (recommended)
+OTEL_EXPORTER_OTLP_PROTOCOL=http/json</pre>
+            </div>
+        </div>
+    </div>
+
+    {# SDK Examples #}
+    <div class="bg-white shadow rounded-lg sdk-examples">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-base font-medium text-gray-900">SDK Setup Examples</h3>
+            <p class="mt-1 text-sm text-gray-500">Quick start guides for popular OpenTelemetry SDKs</p>
+        </div>
+        <div class="px-4 py-5 sm:px-6 space-y-6">
+            {# Swift #}
+            <div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Swift (iOS)</h4>
+                <div class="bg-gray-900 rounded-md p-4 overflow-x-auto">
+                    <pre class="text-sm text-gray-300 font-mono">import OpenTelemetryApi
+import OpenTelemetrySdk
+import OtlpExporter
+
+// Configure the OTLP exporter
+let configuration = OtlpConfiguration(
+    timeout: TimeInterval(10),
+    headers: [("X-Errata-Key", "YOUR_API_KEY")]
+)
+
+let exporter = OtlpHttpTraceExporter(
+    endpoint: URL(string: "{{ app.request.schemeAndHttpHost }}/v1/traces")!,
+    config: configuration
+)
+
+// Initialize the TracerProvider
+let tracerProvider = TracerProviderBuilder()
+    .add(spanProcessor: BatchSpanProcessor(spanExporter: exporter))
+    .with(resource: Resource(attributes: [
+        ResourceAttributes.serviceName.key: AttributeValue.string("your-ios-app"),
+        ResourceAttributes.serviceVersion.key: AttributeValue.string("1.0.0")
+    ]))
+    .build()
+
+OpenTelemetry.registerTracerProvider(tracerProvider: tracerProvider)</pre>
+                </div>
+            </div>
+
+            {# Python #}
+            <div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Python</h4>
+                <div class="bg-gray-900 rounded-md p-4 overflow-x-auto">
+                    <pre class="text-sm text-gray-300 font-mono">from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+# Configure exporter with Errata endpoint
+exporter = OTLPSpanExporter(
+    endpoint="{{ app.request.schemeAndHttpHost }}/v1/traces",
+    headers={"X-Errata-Key": "YOUR_API_KEY"}
+)
+
+# Set up the tracer provider
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(exporter))
+trace.set_tracer_provider(provider)</pre>
+                </div>
+            </div>
+
+            {# Node.js #}
+            <div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Node.js</h4>
+                <div class="bg-gray-900 rounded-md p-4 overflow-x-auto">
+                    <pre class="text-sm text-gray-300 font-mono">const { NodeSDK } = require('@opentelemetry/sdk-node');
+const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
+
+const traceExporter = new OTLPTraceExporter({
+  url: '{{ app.request.schemeAndHttpHost }}/v1/traces',
+  headers: {
+    'X-Errata-Key': 'YOUR_API_KEY'
+  }
+});
+
+const sdk = new NodeSDK({
+  traceExporter,
+  serviceName: 'your-node-app'
+});
+
+sdk.start();</pre>
+                </div>
+            </div>
+
+            {# Go #}
+            <div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Go</h4>
+                <div class="bg-gray-900 rounded-md p-4 overflow-x-auto">
+                    <pre class="text-sm text-gray-300 font-mono">package main
+
+import (
+    "go.opentelemetry.io/otel"
+    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+    "go.opentelemetry.io/otel/sdk/trace"
+)
+
+func initTracer() (*trace.TracerProvider, error) {
+    exporter, err := otlptracehttp.New(
+        context.Background(),
+        otlptracehttp.WithEndpoint("{{ app.request.host }}"),
+        otlptracehttp.WithURLPath("/v1/traces"),
+        otlptracehttp.WithHeaders(map[string]string{
+            "X-Errata-Key": "YOUR_API_KEY",
+        }),
+    )
+    if err != nil {
+        return nil, err
+    }
+
+    tp := trace.NewTracerProvider(
+        trace.WithBatcher(exporter),
+    )
+    otel.SetTracerProvider(tp)
+    return tp, nil
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

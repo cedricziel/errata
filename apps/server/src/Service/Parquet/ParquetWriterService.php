@@ -127,7 +127,7 @@ class ParquetWriterService
      */
     public function getFilePath(string $projectId, int $timestampMs): string
     {
-        $date = new \DateTimeImmutable('@' . (int) ($timestampMs / 1000));
+        $date = new \DateTimeImmutable('@'.(int) ($timestampMs / 1000));
         $batchId = Uuid::v7();
 
         return sprintf(
@@ -147,7 +147,7 @@ class ParquetWriterService
      */
     public function getProjectStoragePath(string $projectId): string
     {
-        return $this->storagePath . '/' . $projectId;
+        return $this->storagePath.'/'.$projectId;
     }
 
     /**
