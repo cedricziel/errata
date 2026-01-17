@@ -1,0 +1,71 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Settings - {{ organization.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Header #}
+    <div>
+        <div class="flex items-center">
+            <a href="{{ path('organization_index') }}" class="text-sm text-gray-500 hover:text-gray-700">
+                Organizations
+            </a>
+            <svg class="mx-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+            <a href="{{ path('organization_show', { publicId: organization.publicId }) }}" class="text-sm text-gray-500 hover:text-gray-700">
+                {{ organization.name }}
+            </a>
+            <svg class="mx-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+            <span class="text-sm text-gray-900">Settings</span>
+        </div>
+        <h1 class="mt-2 text-2xl font-bold text-gray-900">Organization Settings</h1>
+        <p class="mt-1 text-sm text-gray-500">Manage your organization details</p>
+    </div>
+
+    {# Settings Form #}
+    <div class="bg-white shadow rounded-lg">
+        <form action="{{ path('organization_settings', { publicId: organization.publicId }) }}" method="POST">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-4">
+                        <label for="name" class="block text-sm font-medium leading-6 text-gray-900">Organization Name</label>
+                        <div class="mt-2">
+                            <input type="text" name="name" id="name" value="{{ organization.name }}" required
+                                   class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 text-right sm:px-6 rounded-b-lg">
+                <a href="{{ path('organization_show', { publicId: organization.publicId }) }}"
+                   class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 mr-3">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {# Sidebar Navigation #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-base font-semibold leading-6 text-gray-900">Other Settings</h3>
+            <div class="mt-4">
+                <a href="{{ path('organization_members', { publicId: organization.publicId }) }}"
+                   class="group flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                    <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
+                    </svg>
+                    Members
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Members - {{ organization.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Header #}
+    <div>
+        <div class="flex items-center">
+            <a href="{{ path('organization_index') }}" class="text-sm text-gray-500 hover:text-gray-700">
+                Organizations
+            </a>
+            <svg class="mx-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+            <a href="{{ path('organization_show', { publicId: organization.publicId }) }}" class="text-sm text-gray-500 hover:text-gray-700">
+                {{ organization.name }}
+            </a>
+            <svg class="mx-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+            <span class="text-sm text-gray-900">Members</span>
+        </div>
+        <h1 class="mt-2 text-2xl font-bold text-gray-900">Members</h1>
+        <p class="mt-1 text-sm text-gray-500">Manage organization members and their roles</p>
+    </div>
+
+    {# Invite Member Form #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-base font-semibold leading-6 text-gray-900">Add Member</h3>
+            <p class="mt-1 text-sm text-gray-500">Invite a user by their email address</p>
+            <form action="{{ path('organization_invite_member', { publicId: organization.publicId }) }}" method="POST" class="mt-4">
+                <div class="flex items-end gap-4">
+                    <div class="flex-1">
+                        <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Email</label>
+                        <div class="mt-2">
+                            <input type="email" name="email" id="email" required placeholder="user@example.com"
+                                   class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                        </div>
+                    </div>
+                    <div class="w-40">
+                        <label for="role" class="block text-sm font-medium leading-6 text-gray-900">Role</label>
+                        <div class="mt-2">
+                            <select name="role" id="role"
+                                    class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                <option value="member">Member</option>
+                                {% if currentMembership.isOwner %}
+                                    <option value="admin">Admin</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit"
+                                class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                            <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                            </svg>
+                            Add
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# Members List #}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-base font-semibold leading-6 text-gray-900">Current Members</h3>
+        </div>
+        <ul role="list" class="divide-y divide-gray-200">
+            {% for membership in memberships %}
+                <li class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <span class="text-sm font-medium text-gray-600">{{ membership.user.email|first|upper }}</span>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ membership.user.name ?? membership.user.email }}
+                                    {% if membership.user.id == app.user.id %}
+                                        <span class="text-gray-500">(you)</span>
+                                    {% endif %}
+                                </p>
+                                <p class="text-sm text-gray-500">{{ membership.user.email }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            {# Role Badge #}
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                                {% if membership.role == 'owner' %}bg-purple-100 text-purple-800
+                                {% elseif membership.role == 'admin' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ membership.role|capitalize }}
+                            </span>
+
+                            {# Actions (only for owners) #}
+                            {% if currentMembership.isOwner and membership.user.id != app.user.id %}
+                                <div class="flex items-center space-x-2">
+                                    {# Change Role #}
+                                    <form action="{{ path('organization_change_member_role', { publicId: organization.publicId, memberId: membership.id }) }}" method="POST" class="inline">
+                                        <select name="role" onchange="this.form.submit()"
+                                                class="block rounded-md border-0 py-1 pl-2 pr-8 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 text-xs">
+                                            <option value="member" {% if membership.role == 'member' %}selected{% endif %}>Member</option>
+                                            <option value="admin" {% if membership.role == 'admin' %}selected{% endif %}>Admin</option>
+                                            <option value="owner" {% if membership.role == 'owner' %}selected{% endif %}>Owner</option>
+                                        </select>
+                                    </form>
+
+                                    {# Remove Member #}
+                                    <form action="{{ path('organization_remove_member', { publicId: organization.publicId, memberId: membership.id }) }}" method="POST" class="inline"
+                                          onsubmit="return confirm('Are you sure you want to remove {{ membership.user.email }} from this organization?')">
+                                        <button type="submit" class="text-red-600 hover:text-red-800">
+                                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% elseif currentMembership.isAdmin and membership.isMember and membership.user.id != app.user.id %}
+                                {# Admins can only remove members #}
+                                <form action="{{ path('organization_remove_member', { publicId: organization.publicId, memberId: membership.id }) }}" method="POST" class="inline"
+                                      onsubmit="return confirm('Are you sure you want to remove {{ membership.user.email }} from this organization?')">
+                                    <button type="submit" class="text-red-600 hover:text-red-800">
+                                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-2 text-sm text-gray-500">
+                        Joined {{ membership.joinedAt|date('M j, Y') }}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

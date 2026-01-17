@@ -28,6 +28,43 @@
                     </div>
                 </div>
                 <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                    {# Organization Switcher Dropdown #}
+                    {% if current_organization %}
+                    <div class="relative" data-controller="dropdown">
+                        <button type="button" data-action="click->dropdown#toggle" class="flex items-center space-x-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                            <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1.581.814L10 13.197l-4.419 3.617A1 1 0 014 16V4zm2-1a1 1 0 00-1 1v10.566l3.419-2.8a1 1 0 011.162 0L13 14.566V4a1 1 0 00-1-1H6z" clip-rule="evenodd" />
+                            </svg>
+                            <span>{{ current_organization.name }}</span>
+                            <svg class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div data-dropdown-target="menu" class="hidden absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                            <div class="py-1">
+                                {% for org in user_organizations %}
+                                    {% if org.id != current_organization.id %}
+                                        <form action="{{ path('organization_switch', { publicId: org.publicId }) }}" method="POST">
+                                            <button type="submit" class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
+                                                {{ org.name }}
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <div class="px-4 py-2 text-sm text-gray-900 font-medium bg-gray-50">
+                                            {{ org.name }}
+                                            <span class="text-xs text-gray-500">(current)</span>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                                <div class="border-t border-gray-100"></div>
+                                <a href="{{ path('organization_index') }}" class="block px-4 py-2 text-sm text-indigo-600 hover:bg-gray-100">
+                                    Manage Organizations
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <div class="relative ml-3">
                         <div class="flex items-center space-x-4">
                             {% if is_granted('ROLE_ADMIN') %}
