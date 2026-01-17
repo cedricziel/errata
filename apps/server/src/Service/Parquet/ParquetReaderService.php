@@ -176,7 +176,7 @@ class ParquetReaderService
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
     ): array {
-        $basePath = $this->storagePath . '/' . $projectId;
+        $basePath = $this->storagePath.'/'.$projectId;
 
         if (!is_dir($basePath)) {
             return [];

@@ -107,7 +107,7 @@ class IssueRepository extends ServiceEntityRepository
 
         if (!empty($filters['search'])) {
             $qb->andWhere('i.title LIKE :search OR i.culprit LIKE :search')
-                ->setParameter('search', '%' . $filters['search'] . '%');
+                ->setParameter('search', '%'.$filters['search'].'%');
         }
 
         if (!empty($filters['from'])) {
