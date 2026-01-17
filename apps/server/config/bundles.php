@@ -18,4 +18,5 @@ return [
     Symfony\UX\LiveComponent\LiveComponentBundle::class => ['all' => true],
     ApiPlatform\Symfony\Bundle\ApiPlatformBundle::class => ['all' => true],
     Zenstruck\Messenger\Test\ZenstruckMessengerTestBundle::class => ['test' => true],
+    EasyCorp\Bundle\EasyAdminBundle\EasyAdminBundle::class => ['all' => true],
 ];

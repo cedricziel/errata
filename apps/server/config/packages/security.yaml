@@ -57,6 +57,8 @@ security:
         # Login and registration pages are public
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
+        # Admin panel requires ROLE_ADMIN
+        - { path: ^/admin, roles: ROLE_ADMIN }
         # Dashboard requires authentication
         - { path: ^/, roles: ROLE_USER }
 

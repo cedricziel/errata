@@ -46,6 +46,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Project::class, mappedBy: 'owner', orphanRemoval: true)]
     private Collection $projects;
 
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
+    private bool $isActive = true;
+
     public function __construct()
     {
         $this->projects = new ArrayCollection();
@@ -164,6 +167,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // orphanRemoval: true will handle deletion when removed from collection
         $this->projects->removeElement($project);
+
+        return $this;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isActive;
+    }
+
+    public function setIsActive(bool $isActive): static
+    {
+        $this->isActive = $isActive;
 
         return $this;
     }

@@ -12,6 +12,7 @@
         "doctrine/doctrine-bundle": "^3.2.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6.1",
+        "easycorp/easyadmin-bundle": "^4.27",
         "flow-php/parquet": "^0.30.0",
         "open-telemetry/gen-otlp-protobuf": "^1.8",
         "phpdocumentor/reflection-docblock": "^6.0",
