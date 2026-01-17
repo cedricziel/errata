@@ -1,0 +1,195 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Metrics - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Breadcrumb #}
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol role="list" class="flex items-center space-x-4">
+            <li>
+                <a href="{{ path('project_index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Projects</a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="{{ path('project_show', { publicId: project.publicId }) }}" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">{{ project.name }}</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-4 text-sm font-medium text-gray-500">Metrics</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    {# Header #}
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Metrics</h1>
+            <p class="mt-1 text-sm text-gray-500">Application metrics from OpenTelemetry instrumentation</p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex space-x-2">
+            <a href="{{ path('otel_traces_index', { publicId: project.publicId }) }}"
+               class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                Traces
+            </a>
+            <a href="{{ path('otel_logs_index', { publicId: project.publicId }) }}"
+               class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                Logs
+            </a>
+        </div>
+    </div>
+
+    {# Filters #}
+    <div class="bg-white shadow rounded-lg p-4">
+        <form method="get" class="grid grid-cols-1 gap-4 sm:grid-cols-5">
+            <div>
+                <label for="metric" class="block text-sm font-medium text-gray-700">Metric Name</label>
+                <select id="metric" name="metric"
+                        class="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
+                    <option value="">All Metrics</option>
+                    {% for name in metric_names %}
+                        <option value="{{ name }}" {{ filters.metric|default('') == name ? 'selected' : '' }}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="from" class="block text-sm font-medium text-gray-700">From</label>
+                <input type="datetime-local" id="from" name="from" value="{{ filters.from|default('') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label for="to" class="block text-sm font-medium text-gray-700">To</label>
+                <input type="datetime-local" id="to" name="to" value="{{ filters.to|default('') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
+            </div>
+
+            <div class="flex items-end col-span-2">
+                <button type="submit"
+                        class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                    Filter
+                </button>
+                {% if filters.metric or filters.from or filters.to %}
+                    <a href="{{ path('otel_metrics_index', { publicId: project.publicId }) }}"
+                       class="ml-2 text-sm text-gray-500 hover:text-gray-700">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    {# Metrics Summary Cards #}
+    {% if metric_names|length > 0 and not filters.metric %}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {% for name in metric_names|slice(0, 8) %}
+                <a href="{{ path('otel_metrics_index', { publicId: project.publicId, metric: name }) }}"
+                   class="bg-white shadow rounded-lg p-4 hover:bg-gray-50">
+                    <dt class="text-sm font-medium text-gray-500 truncate">{{ name }}</dt>
+                    <dd class="mt-1 text-lg font-semibold text-indigo-600">View</dd>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {# Metrics Table #}
+    <div class="bg-white shadow overflow-hidden rounded-lg">
+        {% if metrics|length > 0 %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Environment</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for metric in metrics %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ metric.metric_name|default('Unknown') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                                {{ metric.metric_value|default(0)|number_format(4) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ metric.metric_unit|default('-') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ ((metric.timestamp / 1000)|round)|date('M j, Y g:i:s A') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ metric.environment|default('-') }}
+                            </td>
+                        </tr>
+                        {% if metric.tags or metric.context %}
+                            <tr class="bg-gray-50">
+                                <td colspan="5" class="px-6 py-3">
+                                    <div class="text-xs">
+                                        {% if metric.tags and metric.tags|length > 0 %}
+                                            <div class="mb-2">
+                                                <span class="font-medium text-gray-700">Tags:</span>
+                                                <div class="mt-1 flex flex-wrap gap-1">
+                                                    {% for key, value in metric.tags %}
+                                                        <span class="inline-flex items-center rounded bg-gray-200 px-2 py-0.5 text-gray-700">
+                                                            {{ key }}: {{ value }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {# Pagination #}
+            {% if metrics|length == 50 %}
+                <div class="border-t border-gray-200 px-4 py-3 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        {% if page > 1 %}
+                            <a href="{{ path('otel_metrics_index', filters|merge({ publicId: project.publicId, page: page - 1 })) }}"
+                               class="relative inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                Previous
+                            </a>
+                        {% else %}
+                            <span></span>
+                        {% endif %}
+                        <span class="text-sm text-gray-700">Page {{ page }}</span>
+                        <a href="{{ path('otel_metrics_index', filters|merge({ publicId: project.publicId, page: page + 1 })) }}"
+                           class="relative inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            Next
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-semibold text-gray-900">No metrics found</h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    {% if filters.metric or filters.from or filters.to %}
+                        Try adjusting your filters.
+                    {% else %}
+                        No metrics have been received yet. Send some OTLP metric data to get started.
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

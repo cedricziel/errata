@@ -1,0 +1,228 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Trace {{ trace_id|slice(0, 16) }} - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Breadcrumb #}
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol role="list" class="flex items-center space-x-4">
+            <li>
+                <a href="{{ path('project_index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Projects</a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="{{ path('project_show', { publicId: project.publicId }) }}" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">{{ project.name }}</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="{{ path('otel_traces_index', { publicId: project.publicId }) }}" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">Traces</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-4 text-sm font-medium text-gray-500 font-mono">{{ trace_id|slice(0, 16) }}...</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    {# Header #}
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Trace Details</h1>
+            <p class="mt-1 text-sm text-gray-500 font-mono">{{ trace_id }}</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <a href="{{ path('otel_traces_index', { publicId: project.publicId }) }}"
+               class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                Back to Traces
+            </a>
+        </div>
+    </div>
+
+    {# Trace Summary #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Summary</h2>
+        </div>
+        <dl class="px-4 py-5 sm:px-6 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-4">
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Total Spans</dt>
+                <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ spans|length }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Duration</dt>
+                <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ (trace_duration / 1000)|number_format(2) }} ms</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Start Time</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ ((trace_start / 1000)|round)|date('M j, Y g:i:s A') }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Status</dt>
+                <dd class="mt-1">
+                    {% set has_errors = false %}
+                    {% for span in spans %}
+                        {% if span.span_status == 'error' or span.span_status == 'ERROR' %}
+                            {% set has_errors = true %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if has_errors %}
+                        <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Contains Errors</span>
+                    {% else %}
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">OK</span>
+                    {% endif %}
+                </dd>
+            </div>
+        </dl>
+    </div>
+
+    {# Trace Waterfall #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Span Waterfall</h2>
+        </div>
+        <div class="px-4 py-5 sm:px-6">
+            {# Timeline header #}
+            <div class="flex mb-4 text-xs text-gray-500 border-b border-gray-200 pb-2">
+                <div class="w-1/3">Operation</div>
+                <div class="w-2/3 flex justify-between px-2">
+                    <span>0 ms</span>
+                    <span>{{ (trace_duration / 2000)|number_format(0) }} ms</span>
+                    <span>{{ (trace_duration / 1000)|number_format(0) }} ms</span>
+                </div>
+            </div>
+
+            {# Span rows #}
+            {% macro render_span(span, trace_start, trace_duration, depth) %}
+                {% set offset_ms = (span.timestamp - trace_start) / 1000 %}
+                {% set duration_ms = span.duration_ms|default(0) %}
+                {% set offset_percent = trace_duration > 0 ? (offset_ms / (trace_duration / 1000)) * 100 : 0 %}
+                {% set width_percent = trace_duration > 0 ? (duration_ms / (trace_duration / 1000)) * 100 : 0 %}
+                {% set width_percent = width_percent < 1 ? 1 : width_percent %}
+                {% set is_error = span.span_status == 'error' or span.span_status == 'ERROR' %}
+
+                <div class="flex items-center py-2 hover:bg-gray-50 border-b border-gray-100" data-span-id="{{ span.span_id }}">
+                    <div class="w-1/3 flex items-center">
+                        <div style="width: {{ depth * 16 }}px" class="flex-shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ span.operation|default('Unknown') }}</p>
+                            <p class="text-xs text-gray-500 font-mono truncate">{{ span.span_id|slice(0, 8) }}</p>
+                        </div>
+                    </div>
+                    <div class="w-2/3 px-2">
+                        <div class="relative h-6 bg-gray-100 rounded">
+                            <div class="absolute h-full rounded {{ is_error ? 'bg-red-400' : 'bg-indigo-400' }}"
+                                 style="left: {{ offset_percent }}%; width: {{ width_percent }}%; min-width: 4px;"
+                                 title="{{ span.operation|default('Unknown') }}: {{ duration_ms|number_format(2) }} ms">
+                            </div>
+                            <span class="absolute right-2 top-1 text-xs text-gray-600">{{ duration_ms|number_format(2) }} ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if span.children is defined and span.children|length > 0 %}
+                    {% for child in span.children %}
+                        {{ _self.render_span(child, trace_start, trace_duration, depth + 1) }}
+                    {% endfor %}
+                {% endif %}
+            {% endmacro %}
+
+            {% if span_tree|length > 0 %}
+                {% for root_span in span_tree %}
+                    {{ _self.render_span(root_span, trace_start, trace_duration, 0) }}
+                {% endfor %}
+            {% else %}
+                {# Fallback: flat list if tree building failed #}
+                {% for span in spans %}
+                    {{ _self.render_span(span, trace_start, trace_duration, 0) }}
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    {# Span Details Table #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Span Details</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Span ID</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parent</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for span in spans %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ span.operation|default('Unknown') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
+                                {{ span.span_id|slice(0, 16) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
+                                {{ span.parent_span_id ? span.parent_span_id|slice(0, 16) : '-' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ span.duration_ms|default(0)|number_format(2) }} ms
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if span.span_status == 'error' or span.span_status == 'ERROR' %}
+                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Error</span>
+                                {% elseif span.span_status == 'ok' or span.span_status == 'OK' %}
+                                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">OK</span>
+                                {% else %}
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">{{ span.span_status|default('Unset') }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if span.tags or span.context %}
+                            <tr class="bg-gray-50">
+                                <td colspan="5" class="px-6 py-3">
+                                    <div class="text-xs">
+                                        {% if span.tags %}
+                                            <div class="mb-2">
+                                                <span class="font-medium text-gray-700">Tags:</span>
+                                                <div class="mt-1 flex flex-wrap gap-1">
+                                                    {% for key, value in span.tags %}
+                                                        <span class="inline-flex items-center rounded bg-gray-200 px-2 py-0.5 text-gray-700">
+                                                            {{ key }}: {{ value }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        {% if span.context %}
+                                            <div>
+                                                <span class="font-medium text-gray-700">Context:</span>
+                                                <pre class="mt-1 bg-gray-100 p-2 rounded text-xs overflow-x-auto">{{ span.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

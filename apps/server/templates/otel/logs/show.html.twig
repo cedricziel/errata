@@ -1,0 +1,201 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Log Detail - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Breadcrumb #}
+    <nav class="flex" aria-label="Breadcrumb">
+        <ol role="list" class="flex items-center space-x-4">
+            <li>
+                <a href="{{ path('project_index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Projects</a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="{{ path('project_show', { publicId: project.publicId }) }}" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">{{ project.name }}</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="{{ path('otel_logs_index', { publicId: project.publicId }) }}" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">Logs</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-4 text-sm font-medium text-gray-500">Detail</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    {# Header #}
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Log Detail</h1>
+            <p class="mt-1 text-sm text-gray-500 font-mono">{{ log.event_id }}</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <a href="{{ path('otel_logs_index', { publicId: project.publicId }) }}"
+               class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                Back to Logs
+            </a>
+        </div>
+    </div>
+
+    {# Log Summary #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-lg font-medium text-gray-900">Summary</h2>
+            {% set severity = log.severity|default('info') %}
+            {% if severity == 'fatal' or severity == 'error' %}
+                <span class="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">{{ severity|upper }}</span>
+            {% elseif severity == 'warning' %}
+                <span class="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-800">{{ severity|upper }}</span>
+            {% elseif severity == 'info' %}
+                <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">{{ severity|upper }}</span>
+            {% elseif severity == 'debug' %}
+                <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800">{{ severity|upper }}</span>
+            {% else %}
+                <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">{{ severity|upper }}</span>
+            {% endif %}
+        </div>
+        <dl class="px-4 py-5 sm:px-6 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-3">
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Timestamp</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ ((log.timestamp / 1000)|round)|date('M j, Y g:i:s A') }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Environment</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ log.environment|default('Unknown') }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">App Version</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ log.app_version|default('Unknown') }}</dd>
+            </div>
+        </dl>
+    </div>
+
+    {# Message #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Message</h2>
+        </div>
+        <div class="px-4 py-5 sm:px-6">
+            <pre class="bg-gray-50 p-4 rounded-md text-sm text-gray-800 whitespace-pre-wrap overflow-x-auto">{{ log.message|default('No message') }}</pre>
+        </div>
+    </div>
+
+    {# Trace Correlation #}
+    {% if log.trace_id %}
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Trace Correlation</h2>
+            </div>
+            <div class="px-4 py-5 sm:px-6">
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Trace ID</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-mono">
+                            <a href="{{ path('otel_traces_show', { publicId: project.publicId, traceId: log.trace_id }) }}"
+                               class="text-indigo-600 hover:text-indigo-900">
+                                {{ log.trace_id }}
+                            </a>
+                        </dd>
+                    </div>
+                    {% if log.span_id %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Span ID</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-mono">{{ log.span_id }}</dd>
+                        </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Tags #}
+    {% if log.tags and log.tags|length > 0 %}
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Tags</h2>
+            </div>
+            <div class="px-4 py-5 sm:px-6">
+                <div class="flex flex-wrap gap-2">
+                    {% for key, value in log.tags %}
+                        <span class="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+                            <span class="font-semibold">{{ key }}:</span>
+                            <span class="ml-1">{{ value }}</span>
+                        </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Context #}
+    {% if log.context and log.context|length > 0 %}
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Context</h2>
+            </div>
+            <div class="px-4 py-5 sm:px-6">
+                <pre class="bg-gray-50 p-4 rounded-md text-sm text-gray-800 overflow-x-auto">{{ log.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Device & App Info #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Device & App Information</h2>
+        </div>
+        <dl class="px-4 py-5 sm:px-6 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-3">
+            {% if log.device_model %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Device Model</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ log.device_model }}</dd>
+                </div>
+            {% endif %}
+            {% if log.os_name or log.os_version %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Operating System</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ log.os_name|default('') }} {{ log.os_version|default('') }}</dd>
+                </div>
+            {% endif %}
+            {% if log.bundle_id %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Bundle ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900 font-mono">{{ log.bundle_id }}</dd>
+                </div>
+            {% endif %}
+            {% if log.app_build %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">App Build</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ log.app_build }}</dd>
+                </div>
+            {% endif %}
+            {% if log.user_id %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">User ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900 font-mono">{{ log.user_id }}</dd>
+                </div>
+            {% endif %}
+            {% if log.session_id %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Session ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900 font-mono">{{ log.session_id }}</dd>
+                </div>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+{% endblock %}
