@@ -90,7 +90,6 @@ deploy:
 	ssh -i $(SSH_KEY_PATH) $(SSH_USER)@$(SSH_HOST) "cd $(DEPLOY_PATH) && \
 		mkdir -p var/data var/cache var/log storage/parquet && \
 		touch var/data/errata.db && \
-		echo 'APP_ENV=prod' > .env.local && \
 		composer install --no-dev --optimize-autoloader && \
 		php bin/console importmap:install && \
 		php bin/console asset-map:compile && \

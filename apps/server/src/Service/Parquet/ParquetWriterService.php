@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Parquet;
 
+use App\Service\Telemetry\TracerFactory;
 use Flow\Parquet\Writer;
+use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
@@ -23,6 +26,7 @@ class ParquetWriterService
         #[Autowire('%kernel.project_dir%/storage/parquet')]
         private readonly string $storagePath,
         private readonly LoggerInterface $logger,
+        private readonly TracerFactory $tracerFactory,
     ) {
     }
 
@@ -84,34 +88,54 @@ class ParquetWriterService
             throw new \InvalidArgumentException('No events to write');
         }
 
-        // Determine the path based on the first event
-        $firstEvent = $events[0];
-        $organizationId = $firstEvent['organization_id'] ?? 'unknown';
-        $projectId = $firstEvent['project_id'] ?? 'unknown';
-        $eventType = $firstEvent['event_type'] ?? 'unknown';
-        $timestamp = $firstEvent['timestamp'] ?? (int) (microtime(true) * 1000);
+        $span = $this->startSpan('parquet.write_events');
 
-        $filePath = $this->getFilePath($organizationId, $projectId, $eventType, $timestamp);
-        $this->ensureDirectoryExists(dirname($filePath));
+        try {
+            // Determine the path based on the first event
+            $firstEvent = $events[0];
+            $organizationId = $firstEvent['organization_id'] ?? 'unknown';
+            $projectId = $firstEvent['project_id'] ?? 'unknown';
+            $eventType = $firstEvent['event_type'] ?? 'unknown';
+            $timestamp = $firstEvent['timestamp'] ?? (int) (microtime(true) * 1000);
 
-        $writer = new Writer();
-        $schema = WideEventSchema::getSchema();
+            $span?->setAttribute('organization.id', $organizationId);
+            $span?->setAttribute('project.id', $projectId);
+            $span?->setAttribute('event.type', $eventType);
+            $span?->setAttribute('event.count', count($events));
 
-        $writer->open($filePath, $schema);
+            $filePath = $this->getFilePath($organizationId, $projectId, $eventType, $timestamp);
+            $this->ensureDirectoryExists(dirname($filePath));
 
-        foreach ($events as $event) {
-            $normalized = WideEventSchema::normalize($event);
-            $writer->writeRow($this->eventToRow($normalized));
+            $span?->setAttribute('file.path', $filePath);
+
+            $writer = new Writer();
+            $schema = WideEventSchema::getSchema();
+
+            $writer->open($filePath, $schema);
+
+            foreach ($events as $event) {
+                $normalized = WideEventSchema::normalize($event);
+                $writer->writeRow($this->eventToRow($normalized));
+            }
+
+            $writer->close();
+
+            $span?->setStatus(StatusCode::STATUS_OK);
+
+            $this->logger->info('Wrote events to Parquet file', [
+                'file' => $filePath,
+                'event_count' => count($events),
+            ]);
+
+            return $filePath;
+        } catch (\Throwable $e) {
+            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span?->recordException($e);
+
+            throw $e;
+        } finally {
+            $span?->end();
         }
-
-        $writer->close();
-
-        $this->logger->info('Wrote events to Parquet file', [
-            'file' => $filePath,
-            'event_count' => count($events),
-        ]);
-
-        return $filePath;
     }
 
     /**
@@ -211,5 +235,16 @@ class ParquetWriterService
     public function clearBuffer(): void
     {
         $this->buffer = [];
+    }
+
+    private function startSpan(string $name): ?SpanInterface
+    {
+        if (!$this->tracerFactory->isEnabled()) {
+            return null;
+        }
+
+        return $this->tracerFactory->createTracer('parquet')
+            ->spanBuilder($name)
+            ->startSpan();
     }
 }

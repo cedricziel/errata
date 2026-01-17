@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Parquet;
 
+use App\Service\Telemetry\TracerFactory;
 use Flow\Parquet\Reader;
+use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Finder\Finder;
@@ -18,6 +21,7 @@ class ParquetReaderService
         #[Autowire('%kernel.project_dir%/storage/parquet')]
         private readonly string $storagePath,
         private readonly LoggerInterface $logger,
+        private readonly TracerFactory $tracerFactory,
     ) {
     }
 
@@ -36,10 +40,28 @@ class ParquetReaderService
         ?\DateTimeInterface $to = null,
         array $filters = [],
     ): \Generator {
-        $files = $this->findParquetFiles($organizationId, $projectId, $eventType, $from, $to);
+        $span = $this->startSpan('parquet.read_events');
+        $span?->setAttribute('organization.id', $organizationId ?? 'all');
+        $span?->setAttribute('project.id', $projectId ?? 'all');
+        $span?->setAttribute('event.type', $eventType ?? 'all');
+        $span?->setAttribute('filter.count', count($filters));
 
-        foreach ($files as $file) {
-            yield from $this->readFile($file, $filters);
+        try {
+            $files = $this->findParquetFiles($organizationId, $projectId, $eventType, $from, $to);
+            $span?->setAttribute('file.count', count($files));
+
+            foreach ($files as $file) {
+                yield from $this->readFile($file, $filters);
+            }
+
+            $span?->setStatus(StatusCode::STATUS_OK);
+        } catch (\Throwable $e) {
+            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span?->recordException($e);
+
+            throw $e;
+        } finally {
+            $span?->end();
         }
     }
 
@@ -218,23 +240,41 @@ class ParquetReaderService
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
     ): array {
-        $events = [];
-        $filters = [
-            new \App\DTO\QueryBuilder\QueryFilter('fingerprint', \App\DTO\QueryBuilder\QueryFilter::OPERATOR_EQ, $fingerprint),
-        ];
+        $span = $this->startSpan('parquet.get_events_by_fingerprint');
+        $span?->setAttribute('fingerprint', $fingerprint);
+        $span?->setAttribute('organization.id', $organizationId ?? 'all');
+        $span?->setAttribute('project.id', $projectId ?? 'all');
+        $span?->setAttribute('limit', $limit);
 
-        foreach ($this->readEvents($organizationId, $projectId, $eventType, $from, $to, $filters) as $event) {
-            $events[] = $event;
+        try {
+            $events = [];
+            $filters = [
+                new \App\DTO\QueryBuilder\QueryFilter('fingerprint', \App\DTO\QueryBuilder\QueryFilter::OPERATOR_EQ, $fingerprint),
+            ];
 
-            if (count($events) >= $limit) {
-                break;
+            foreach ($this->readEvents($organizationId, $projectId, $eventType, $from, $to, $filters) as $event) {
+                $events[] = $event;
+
+                if (count($events) >= $limit) {
+                    break;
+                }
             }
+
+            // Sort by timestamp descending
+            usort($events, fn ($a, $b) => ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0));
+
+            $span?->setAttribute('event.count', count($events));
+            $span?->setStatus(StatusCode::STATUS_OK);
+
+            return $events;
+        } catch (\Throwable $e) {
+            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span?->recordException($e);
+
+            throw $e;
+        } finally {
+            $span?->end();
         }
-
-        // Sort by timestamp descending
-        usort($events, fn ($a, $b) => ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0));
-
-        return $events;
     }
 
     /**
@@ -511,5 +551,16 @@ class ParquetReaderService
             \App\DTO\QueryBuilder\QueryFilter::OPERATOR_IN => is_array($value) && in_array($eventValue, $value, false),
             default => $eventValue === $value,
         };
+    }
+
+    private function startSpan(string $name): ?SpanInterface
+    {
+        if (!$this->tracerFactory->isEnabled()) {
+            return null;
+        }
+
+        return $this->tracerFactory->createTracer('parquet')
+            ->spanBuilder($name)
+            ->startSpan();
     }
 }

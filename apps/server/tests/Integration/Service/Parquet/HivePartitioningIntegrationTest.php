@@ -7,6 +7,7 @@ namespace App\Tests\Integration\Service\Parquet;
 use App\Service\Parquet\ParquetReaderService;
 use App\Service\Parquet\ParquetWriterService;
 use App\Service\Parquet\WideEventSchema;
+use App\Service\Telemetry\TracerFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
 
@@ -25,15 +26,27 @@ class HivePartitioningIntegrationTest extends KernelTestCase
 
         $container = static::getContainer();
 
+        $tracerFactory = new TracerFactory(
+            enabled: false,
+            serviceName: 'test',
+            serviceVersion: '1.0.0',
+            exporterEndpoint: 'console',
+            samplerType: 'always_off',
+            samplerArg: 0.0,
+            environment: 'test',
+        );
+
         // Create services with test storage path
         $this->writer = new ParquetWriterService(
             $this->storagePath,
-            $container->get('logger')
+            $container->get('logger'),
+            $tracerFactory,
         );
 
         $this->reader = new ParquetReaderService(
             $this->storagePath,
-            $container->get('logger')
+            $container->get('logger'),
+            $tracerFactory,
         );
     }
 

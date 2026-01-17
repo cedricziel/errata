@@ -10,6 +10,9 @@ use App\Repository\IssueRepository;
 use App\Repository\ProjectRepository;
 use App\Service\FingerprintService;
 use App\Service\Parquet\ParquetWriterService;
+use App\Service\Telemetry\TracerFactory;
+use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Uid\Uuid;
@@ -26,53 +29,81 @@ class ProcessEventHandler
         private readonly FingerprintService $fingerprintService,
         private readonly ParquetWriterService $parquetWriter,
         private readonly LoggerInterface $logger,
+        private readonly TracerFactory $tracerFactory,
     ) {
     }
 
     public function __invoke(ProcessEvent $message): void
     {
-        $this->logger->info('Processing event', [
-            'project_id' => $message->projectId,
-            'event_type' => $message->eventData['event_type'] ?? 'unknown',
-        ]);
+        $span = $this->startSpan('process_event');
+        $eventType = $message->eventData['event_type'] ?? 'unknown';
 
-        // Find the project
-        $project = $this->projectRepository->findByPublicId($message->projectId);
+        $span?->setAttribute('project.id', $message->projectId);
+        $span?->setAttribute('event.type', $eventType);
 
-        if (null === $project) {
-            $this->logger->error('Project not found', ['project_id' => $message->projectId]);
-
-            return;
-        }
-
-        // Get organization ID for Hive partitioning
-        $organizationId = $project->getOrganization()->getPublicId()?->toRfc4122();
-
-        // Prepare the event data
-        $eventData = $this->prepareEventData($message->eventData, $organizationId, $message->projectId, $message->environment);
-
-        // Generate fingerprint
-        $fingerprint = $this->fingerprintService->generateFingerprint($eventData);
-        $eventData['fingerprint'] = $fingerprint;
-
-        // Find or create the issue
-        $issue = $this->findOrCreateIssue($project, $eventData, $fingerprint);
-
-        // Write event to Parquet
         try {
-            $this->parquetWriter->writeEvent($eventData);
-        } catch (\Throwable $e) {
-            $this->logger->error('Failed to write event to Parquet', [
-                'error' => $e->getMessage(),
-                'event_id' => $eventData['event_id'],
+            $this->logger->info('Processing event', [
+                'project_id' => $message->projectId,
+                'event_type' => $eventType,
             ]);
-        }
 
-        $this->logger->info('Event processed successfully', [
-            'event_id' => $eventData['event_id'],
-            'issue_id' => $issue->getPublicId()?->toRfc4122(),
-            'fingerprint' => $fingerprint,
-        ]);
+            // Find the project
+            $project = $this->projectRepository->findByPublicId($message->projectId);
+
+            if (null === $project) {
+                $this->logger->error('Project not found', ['project_id' => $message->projectId]);
+                $span?->setStatus(StatusCode::STATUS_ERROR, 'Project not found');
+
+                return;
+            }
+
+            // Get organization ID for Hive partitioning
+            $organizationId = $project->getOrganization()->getPublicId()?->toRfc4122();
+
+            // Prepare the event data
+            $eventData = $this->prepareEventData($message->eventData, $organizationId, $message->projectId, $message->environment);
+
+            // Generate fingerprint
+            $fingerprint = $this->traceOperation('fingerprint.generate', function () use ($eventData) {
+                return $this->fingerprintService->generateFingerprint($eventData);
+            });
+            $eventData['fingerprint'] = $fingerprint;
+            $span?->setAttribute('fingerprint', $fingerprint);
+
+            // Find or create the issue
+            $issue = $this->traceOperation('issue.find_or_create', function () use ($project, $eventData, $fingerprint) {
+                return $this->findOrCreateIssue($project, $eventData, $fingerprint);
+            });
+            $span?->setAttribute('issue.id', $issue->getPublicId()?->toRfc4122());
+
+            // Write event to Parquet
+            try {
+                $this->traceOperation('parquet.write', function () use ($eventData): void {
+                    $this->parquetWriter->writeEvent($eventData);
+                });
+            } catch (\Throwable $e) {
+                $this->logger->error('Failed to write event to Parquet', [
+                    'error' => $e->getMessage(),
+                    'event_id' => $eventData['event_id'],
+                ]);
+                // Don't rethrow - we still consider the event processed
+            }
+
+            $span?->setStatus(StatusCode::STATUS_OK);
+
+            $this->logger->info('Event processed successfully', [
+                'event_id' => $eventData['event_id'],
+                'issue_id' => $issue->getPublicId()?->toRfc4122(),
+                'fingerprint' => $fingerprint,
+            ]);
+        } catch (\Throwable $e) {
+            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span?->recordException($e);
+
+            throw $e;
+        } finally {
+            $span?->end();
+        }
     }
 
     /**
@@ -166,5 +197,53 @@ class ProcessEventHandler
             'log' => Issue::TYPE_LOG,
             default => Issue::TYPE_ERROR,
         };
+    }
+
+    private function startSpan(string $name): ?SpanInterface
+    {
+        if (!$this->tracerFactory->isEnabled()) {
+            return null;
+        }
+
+        return $this->tracerFactory->createTracer('event-handler')
+            ->spanBuilder($name)
+            ->startSpan();
+    }
+
+    /**
+     * Execute an operation within a traced span.
+     *
+     * @template T
+     *
+     * @param callable(): T $callback
+     *
+     * @return T
+     */
+    private function traceOperation(string $name, callable $callback): mixed
+    {
+        if (!$this->tracerFactory->isEnabled()) {
+            return $callback();
+        }
+
+        $span = $this->tracerFactory->createTracer('event-handler')
+            ->spanBuilder($name)
+            ->startSpan();
+
+        $scope = $span->activate();
+
+        try {
+            $result = $callback();
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $result;
+        } catch (\Throwable $e) {
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span->recordException($e);
+
+            throw $e;
+        } finally {
+            $scope->detach();
+            $span->end();
+        }
     }
 }
