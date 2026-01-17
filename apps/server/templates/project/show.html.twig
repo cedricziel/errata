@@ -62,13 +62,22 @@
         <div class="px-4 py-5 sm:px-6 space-y-4">
             <div>
                 <h3 class="text-sm font-medium text-gray-900">1. Add the Swift Package</h3>
+                <p class="mt-1 text-sm text-gray-500">Add the package dependency to your <code class="bg-gray-100 px-1 rounded">Package.swift</code>:</p>
                 <div class="mt-2 bg-gray-900 rounded-md p-4">
-                    <pre class="text-sm text-gray-300 font-mono">.package(url: "https://github.com/yourorg/errata", from: "0.1.0")</pre>
+                    <pre class="text-sm text-gray-300 font-mono">.package(url: "https://github.com/yourorg/errata.git", from: "1.0.0")</pre>
                 </div>
             </div>
 
             <div>
-                <h3 class="text-sm font-medium text-gray-900">2. Initialize the SDK</h3>
+                <h3 class="text-sm font-medium text-gray-900">2. Add the Target Dependency</h3>
+                <p class="mt-1 text-sm text-gray-500">Add <code class="bg-gray-100 px-1 rounded">ErrataSDK</code> to your target's dependencies:</p>
+                <div class="mt-2 bg-gray-900 rounded-md p-4">
+                    <pre class="text-sm text-gray-300 font-mono">.product(name: "ErrataSDK", package: "errata")</pre>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-sm font-medium text-gray-900">3. Initialize the SDK</h3>
                 <div class="mt-2 bg-gray-900 rounded-md p-4">
                     <pre class="text-sm text-gray-300 font-mono">import ErrataSDK
 

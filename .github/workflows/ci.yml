@@ -79,7 +79,7 @@ jobs:
         run: vendor/bin/phpunit
 
   swift-build:
-    name: Swift Build & Test
+    name: Swift SDK Build & Test
     runs-on: macos-latest
     defaults:
       run:
@@ -92,6 +92,19 @@ jobs:
         run: swift build
 
       - name: Run Swift Tests
+        run: swift test
+
+  swift-monorepo:
+    name: Swift Monorepo Package
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build from repo root
+        run: swift build
+
+      - name: Run tests from repo root
         run: swift test
 
   assets:

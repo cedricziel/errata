@@ -6,12 +6,23 @@ Swift SDK for Errata - iOS Issue Monitoring Platform
 
 ### Swift Package Manager
 
-Add the following to your `Package.swift`:
+Add the package dependency to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourorg/errata", from: "0.1.0")
+    .package(url: "https://github.com/yourorg/errata.git", from: "1.0.0"),
 ]
+```
+
+Then add `ErrataSDK` to your target's dependencies:
+
+```swift
+.target(
+    name: "YourApp",
+    dependencies: [
+        .product(name: "ErrataSDK", package: "errata"),
+    ]
+)
 ```
 
 Or add it via Xcode:

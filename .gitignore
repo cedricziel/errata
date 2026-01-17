@@ -28,7 +28,12 @@ apps/server/storage/parquet/**/*.parquet
 # Logs
 *.log
 
-# Swift Package Manager
+# Swift Package Manager (root - monorepo package)
+/.build/
+/.swiftpm/
+/Package.resolved
+
+# Swift Package Manager (nested SDK package)
 packages/sdk-swift/.build/
 packages/sdk-swift/.swiftpm/
 packages/sdk-swift/Package.resolved
