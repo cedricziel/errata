@@ -6,6 +6,15 @@
     <title>{% block title %}Errata{% endblock %} - Issue Monitoring</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>🐛</text></svg>">
 
+    {# OpenTelemetry Configuration #}
+    <meta name="otel-enabled" content="{{ otel_enabled }}">
+    {% if otel_api_key %}
+        <meta name="otel-api-key" content="{{ otel_api_key }}">
+    {% endif %}
+    <meta name="otel-endpoint" content="{{ otel_endpoint }}">
+    <meta name="otel-service-name" content="{{ otel_service_name }}">
+    <meta name="otel-service-version" content="{{ otel_service_version }}">
+
     {# Tailwind CSS via CDN for MVP - replace with compiled CSS for production #}
     <script src="https://cdn.tailwindcss.com"></script>
 

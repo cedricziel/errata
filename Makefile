@@ -6,6 +6,7 @@ all: install build
 # Install all dependencies
 install:
 	cd apps/server && composer install
+	cd apps/server && php bin/console importmap:install
 
 # Run linting
 lint:
@@ -91,6 +92,7 @@ deploy:
 		touch var/data/errata.db && \
 		echo 'APP_ENV=prod' > .env.local && \
 		composer install --no-dev --optimize-autoloader && \
+		php bin/console importmap:install && \
 		php bin/console asset-map:compile && \
 		php bin/console cache:clear && \
 		php bin/console doctrine:migrations:migrate --no-interaction"

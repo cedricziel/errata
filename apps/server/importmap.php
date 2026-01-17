@@ -31,4 +31,53 @@ return [
     '@symfony/ux-live-component' => [
         'path' => './vendor/symfony/ux-live-component/assets/dist/live_controller.js',
     ],
+
+    // OpenTelemetry Core
+    '@opentelemetry/api' => [
+        'version' => '1.9.0',
+    ],
+    '@opentelemetry/core' => [
+        'version' => '2.0.0',
+    ],
+    '@opentelemetry/resources' => [
+        'version' => '2.0.0',
+    ],
+    '@opentelemetry/semantic-conventions' => [
+        'version' => '1.28.0',
+    ],
+
+    // OpenTelemetry Web Tracer
+    '@opentelemetry/sdk-trace-base' => [
+        'version' => '2.0.0',
+    ],
+    '@opentelemetry/sdk-trace-web' => [
+        'version' => '2.0.0',
+    ],
+
+    // OpenTelemetry OTLP Exporter
+    '@opentelemetry/exporter-trace-otlp-http' => [
+        'version' => '0.57.0',
+    ],
+    '@opentelemetry/otlp-exporter-base' => [
+        'version' => '0.57.0',
+    ],
+    '@opentelemetry/otlp-transformer' => [
+        'version' => '0.57.0',
+    ],
+
+    // OpenTelemetry Instrumentations
+    '@opentelemetry/instrumentation' => [
+        'version' => '0.57.0',
+    ],
+    '@opentelemetry/instrumentation-fetch' => [
+        'version' => '0.57.0',
+    ],
+    '@opentelemetry/instrumentation-document-load' => [
+        'version' => '0.43.0',
+    ],
+
+    // OpenTelemetry Context
+    '@opentelemetry/context-zone' => [
+        'version' => '2.0.0',
+    ],
 ];

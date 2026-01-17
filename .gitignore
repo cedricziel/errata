@@ -47,3 +47,4 @@ DerivedData/
 # Test outputs
 coverage/
 .phpunit.result.cache
+var/

@@ -75,6 +75,9 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
+      - name: Install importmap vendor assets
+        run: php bin/console importmap:install
+
       - name: Setup test database
         run: |
           mkdir -p var/data
@@ -142,6 +145,9 @@ jobs:
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
+
+      - name: Install importmap vendor assets
+        run: php bin/console importmap:install
 
       - name: Compile assets
         run: php bin/console asset-map:compile
