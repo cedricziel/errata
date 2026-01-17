@@ -1,0 +1,35 @@
+version: 2
+updates:
+  # PHP/Composer dependencies
+  - package-ecosystem: "composer"
+    directory: "/apps/server"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(php)"
+    labels:
+      - "dependencies"
+      - "php"
+
+  # Swift Package dependencies
+  - package-ecosystem: "swift"
+    directory: "/packages/sdk-swift"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(swift)"
+    labels:
+      - "dependencies"
+      - "swift"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(actions)"
+    labels:
+      - "dependencies"
+      - "github-actions"
+

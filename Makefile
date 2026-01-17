@@ -1,4 +1,4 @@
-.PHONY: install lint format test serve migrate clean build assets
+.PHONY: install lint format test serve migrate clean build assets deploy
 
 # Default target
 all: install build
@@ -6,7 +6,6 @@ all: install build
 # Install all dependencies
 install:
 	cd apps/server && composer install
-	cd apps/server && npm install
 
 # Run linting
 lint:
@@ -37,13 +36,9 @@ migrate:
 migration:
 	cd apps/server && php bin/console make:migration
 
-# Build frontend assets
+# Compile assets (AssetMapper)
 assets:
-	cd apps/server && npm run build
-
-# Watch frontend assets
-watch:
-	cd apps/server && npm run watch
+	cd apps/server && php bin/console asset-map:compile
 
 # Clean build artifacts
 clean:
@@ -71,3 +66,31 @@ sdk-build:
 
 sdk-test:
 	cd packages/sdk-swift && swift test
+
+# Deploy to production (requires .env.deploy)
+deploy:
+	@test -f .env.deploy || (echo "Error: .env.deploy not found. Copy .env.deploy.example and configure." && exit 1)
+	$(eval include .env.deploy)
+	$(eval export)
+	rsync -avz --delete \
+		--exclude='.git' \
+		--exclude='.github' \
+		--exclude='node_modules' \
+		--exclude='vendor' \
+		--exclude='.env.local' \
+		--exclude='.env.deploy' \
+		--exclude='var/cache' \
+		--exclude='var/log' \
+		--exclude='var/data' \
+		--exclude='storage/parquet' \
+		-e "ssh -i $(SSH_KEY_PATH)" \
+		apps/server/ \
+		$(SSH_USER)@$(SSH_HOST):$(DEPLOY_PATH)
+	ssh -i $(SSH_KEY_PATH) $(SSH_USER)@$(SSH_HOST) "cd $(DEPLOY_PATH) && \
+		mkdir -p var/data var/cache var/log storage/parquet && \
+		touch var/data/errata.db && \
+		echo 'APP_ENV=prod' > .env.local && \
+		composer install --no-dev --optimize-autoloader && \
+		php bin/console asset-map:compile && \
+		php bin/console cache:clear && \
+		php bin/console doctrine:migrations:migrate --no-interaction"
