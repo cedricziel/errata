@@ -9,8 +9,8 @@ install:
 
 # Run linting
 lint:
-	cd apps/server && vendor/bin/phpcs src/ --standard=PSR12 || true
-	cd apps/server && vendor/bin/phpstan analyse src/ -l 5 || true
+	cd apps/server && vendor/bin/phpcs src/ --standard=PSR12
+	cd apps/server && vendor/bin/phpstan analyse --memory-limit=256M
 
 # Format code
 format:

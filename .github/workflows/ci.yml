@@ -40,11 +40,9 @@ jobs:
 
       - name: Run PHPCS
         run: vendor/bin/phpcs src/ --standard=PSR12
-        continue-on-error: true
 
       - name: Run PHPStan
-        run: vendor/bin/phpstan analyse src/ -l 5
-        continue-on-error: true
+        run: vendor/bin/phpstan analyse --memory-limit=256M
 
   php-test:
     name: PHP Tests

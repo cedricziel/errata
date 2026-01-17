@@ -15,7 +15,10 @@ class WideEventPayload
     #[Assert\Choice(choices: ['crash', 'error', 'log', 'metric', 'span'])]
     public string $event_type;
 
-    #[Assert\Choice(choices: ['trace', 'debug', 'info', 'warning', 'error', 'fatal'], message: 'Invalid severity level')]
+    #[Assert\Choice(
+        choices: ['trace', 'debug', 'info', 'warning', 'error', 'fatal'],
+        message: 'Invalid severity level'
+    )]
     public ?string $severity = null;
 
     public ?string $message = null;

@@ -156,7 +156,7 @@ class FingerprintService
 
         // Line number (optional, helps distinguish similar crashes)
         if (!empty($frame['lineno'])) {
-            $parts[] = 'L'.$frame['lineno'];
+            $parts[] = 'L' . $frame['lineno'];
         }
 
         return implode(':', $parts);
@@ -222,7 +222,7 @@ class FingerprintService
 
         // Truncate to reasonable length
         if (strlen($title) > 200) {
-            $title = substr($title, 0, 197).'...';
+            $title = substr($title, 0, 197) . '...';
         }
 
         return $title;
@@ -260,7 +260,7 @@ class FingerprintService
         // Take first line
         $firstLine = strtok($message, "\n");
 
-        return "[{$severity}] ".($firstLine ?: $message);
+        return "[{$severity}] " . ($firstLine ?: $message);
     }
 
     /**
@@ -271,7 +271,7 @@ class FingerprintService
         $name = $event['metric_name'] ?? 'metric';
         $unit = $event['metric_unit'] ?? '';
 
-        return "Metric: {$name}".($unit ? " ({$unit})" : '');
+        return "Metric: {$name}" . ($unit ? " ({$unit})" : '');
     }
 
     /**
@@ -282,7 +282,7 @@ class FingerprintService
         $operation = $event['operation'] ?? 'operation';
         $status = $event['span_status'] ?? '';
 
-        return "Span: {$operation}".($status ? " [{$status}]" : '');
+        return "Span: {$operation}" . ($status ? " [{$status}]" : '');
     }
 
     /**
@@ -365,7 +365,7 @@ class FingerprintService
         }
 
         if (!empty($frame['lineno'])) {
-            return implode(' in ', $parts).':'.$frame['lineno'];
+            return implode(' in ', $parts) . ':' . $frame['lineno'];
         }
 
         return implode(' in ', $parts);

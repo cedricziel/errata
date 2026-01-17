@@ -1,0 +1,7 @@
+parameters:
+    level: 5
+    paths:
+        - src
+    ignoreErrors:
+        # Doctrine entity IDs are assigned by the ORM, not PHP code
+        - identifier: property.unusedType
