@@ -1,91 +1,86 @@
-# Errata Project
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Overview
-Errata is an iOS issue monitoring platform. This is a monorepo containing a Symfony backend and a Swift iOS SDK.
 
-## Technology Stack
-
-### Backend
-- **Framework**: Symfony 7.2
-- **PHP**: 8.2+
-- **Database**: SQLite
-- **Event Storage**: Parquet (flow-php/parquet)
-
-### iOS SDK
-- **Language**: Swift Package
-- **Crash Reporting**: PLCrashReporter
-- **Logging**: swift-log
-
-### Frontend
-- **Templates**: Twig
-- **Styling**: Tailwind CSS
-- **JavaScript**: Stimulus, Turbo
-- **Assets**: Symfony AssetMapper (no npm)
+Errata is an iOS issue monitoring platform (crash reporting, error tracking, performance monitoring). This monorepo contains a Symfony backend and Swift iOS SDK.
 
 ## Key Commands
 
 ```bash
-make install    # Install dependencies
-make lint       # Run PHPCS + PHPStan
-make format     # Run PHP CS Fixer
-make test       # Run PHPUnit tests
-make serve      # Start Symfony dev server
+make install    # Install PHP dependencies (composer install)
+make lint       # Run php-cs-fixer --dry-run + PHPStan
+make format     # Run php-cs-fixer to fix code style
+make test       # Run all PHPUnit tests
+make serve      # Start Symfony dev server (requires symfony CLI)
 make migrate    # Run database migrations
+make db-reset   # Drop, create, and migrate database
+
+# Run a single test or test file
+cd apps/server && vendor/bin/phpunit tests/Integration/Api/EventControllerTest.php
+cd apps/server && vendor/bin/phpunit --filter testMethodName
+
+# iOS SDK
+make sdk-build  # Build Swift package
+make sdk-test   # Run Swift tests
 ```
 
-## Directory Structure
+## Architecture
 
-- `apps/server/` - Symfony backend
-- `packages/sdk-swift/` - iOS SDK
-- `docs/` - Documentation
+### Data Flow
+
+1. iOS SDK sends events to `POST /api/v1/events` with `X-Errata-Key` header
+2. `EventController` validates and dispatches `ProcessEvent` message to Symfony Messenger
+3. `ProcessEventHandler` generates fingerprint, finds/creates `Issue`, writes to Parquet storage
+
+### Dual Storage Strategy
+
+- **SQLite** (`var/data/errata.db`): Metadata - projects, users, API keys, issues (aggregated)
+- **Parquet** (`storage/parquet/`): Raw event data as wide events for analytics
+
+### Key Backend Components
+
+```
+apps/server/src/
+├── Controller/
+│   ├── Api/EventController.php      # Event ingestion API
+│   └── Admin/                        # EasyAdmin controllers
+├── Entity/                           # Doctrine entities: Project, Issue, ApiKey, User
+├── Message/ProcessEvent.php          # Messenger message for async processing
+├── MessageHandler/ProcessEventHandler.php  # Event processing, fingerprinting, storage
+├── Service/
+│   ├── FingerprintService.php        # Issue grouping via fingerprint generation
+│   └── Parquet/                      # Parquet read/write services
+├── Security/ApiKeyAuthenticator.php  # API key authentication
+└── DTO/WideEventPayload.php          # Event payload structure
+```
+
+### iOS SDK Structure
+
+```
+packages/sdk-swift/Sources/ErrataSDK/
+├── Core/           # Errata.swift (main entry), Configuration
+├── Models/         # WideEvent, Span, DeviceInfo
+├── Transport/      # EventQueue, EventStore, BatchSender
+└── Capture/        # CrashReporter (PLCrashReporter integration)
+```
+
+### Testing
+
+- Uses `zenstruck/browser` for fluent HTTP assertions
+- `AbstractIntegrationTestCase` provides test fixtures: `createTestUser()`, `createTestProject()`, `createTestApiKey()`, `createTestIssue()`
+- Test database is reset between tests via SQLite PRAGMA
 
 ## Code Style
 
-- **PHP**: PSR-12 (phpcs) + Symfony style (php-cs-fixer)
-- **Swift**: Standard Swift conventions
+- **PHP**: PSR-12 via php-cs-fixer (Symfony ruleset)
+- **Static Analysis**: PHPStan with Doctrine and Symfony extensions
 - **Commits**: Semantic commits required
-
-## Development Notes
-
-- API authentication via `X-Errata-Key` header
-- Events stored in Parquet files under `apps/server/storage/parquet/`
-- SQLite database at `apps/server/var/data/errata.db`
 
 ## Before Committing
 
-Always run:
 ```bash
 make lint
 make format
 ```
-
-## CI/CD
-
-### GitHub Actions Workflows
-
-- **CI** (`.github/workflows/ci.yml`) - Runs on PRs and pushes to main:
-  - PHP lint (PHPCS + PHPStan)
-  - PHP tests (PHPUnit)
-  - Swift build and tests
-  - Frontend build
-
-- **Deploy** (`.github/workflows/deploy.yml`) - Deploys to production on push to main
-
-### Dependabot
-
-Configured in `.github/dependabot.yml` for:
-- Composer (PHP) dependencies
-- Swift Package dependencies
-- GitHub Actions
-- npm dependencies
-
-### Required Secrets (Environment: production)
-
-Configure these in GitHub repository settings under Environments → production:
-
-| Secret | Description |
-|--------|-------------|
-| `SSH_PRIVATE_KEY` | Private SSH key for deployment |
-| `SSH_HOST` | Production server hostname |
-| `SSH_USER` | SSH username for deployment |
-| `DEPLOY_PATH` | Absolute path on server (e.g., `/var/www/errata`)
