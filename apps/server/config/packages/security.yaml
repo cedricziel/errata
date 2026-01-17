@@ -12,7 +12,8 @@ security:
 
     firewalls:
         dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            # Ensure dev tools and static assets are always allowed
+            pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
 
         # Worker endpoint uses its own secret-based authentication
@@ -51,7 +52,7 @@ security:
                 lifetime: 604800 # 1 week
                 path: /
 
-    # Access control
+    # Note: Only the *first* matching rule is applied
     access_control:
         # API health endpoint is public
         - { path: ^/api/v1/health, roles: PUBLIC_ACCESS }
@@ -70,6 +71,8 @@ security:
 when@test:
     security:
         password_hashers:
+            # Password hashers are resource-intensive by design to ensure security.
+            # In tests, it's safe to reduce their cost to improve performance.
             Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
                 algorithm: auto
                 cost: 4
