@@ -1,0 +1,115 @@
+{# Filter Builder #}
+<div class="space-y-3" data-query-builder-target="filterContainer">
+    {# Existing Filters #}
+    {% for index, filter in queryRequest.filters %}
+    <div class="flex items-center space-x-2 filter-row" data-filter-index="{{ index }}">
+        <select name="filters[{{ index }}][attribute]"
+                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                data-action="change->query-builder#onAttributeChange">
+            <option value="">Select attribute...</option>
+            {% for key, label in filterBuilderData.attributes %}
+            <option value="{{ key }}" {% if filter.attribute == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="filters[{{ index }}][operator]"
+                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+            {% for op, label in filterBuilderData.operators %}
+            <option value="{{ op }}" {% if filter.operator == op %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="text" name="filters[{{ index }}][value]" value="{{ filter.value }}"
+               placeholder="Value..."
+               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+
+        <button type="button"
+                class="p-2 text-gray-400 hover:text-red-500 focus:outline-none"
+                data-action="click->query-builder#removeFilter"
+                data-filter-index="{{ index }}"
+                title="Remove filter">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    {% endfor %}
+
+    {# Empty Filter Row (for adding new filters) #}
+    <div class="flex items-center space-x-2 filter-row new-filter-row" data-filter-index="{{ queryRequest.filters|length }}" style="{% if queryRequest.filters|length > 0 %}display: none;{% endif %}">
+        <select name="filters[{{ queryRequest.filters|length }}][attribute]"
+                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                data-action="change->query-builder#onAttributeChange">
+            <option value="">Select attribute...</option>
+            {% for key, label in filterBuilderData.attributes %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="filters[{{ queryRequest.filters|length }}][operator]"
+                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+            {% for op, label in filterBuilderData.operators %}
+            <option value="{{ op }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="text" name="filters[{{ queryRequest.filters|length }}][value]"
+               placeholder="Value..."
+               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+
+        <button type="button"
+                class="p-2 text-gray-400 hover:text-red-500 focus:outline-none invisible"
+                title="Remove filter">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+</div>
+
+{# Add Filter Button #}
+<div class="mt-3">
+    <button type="button"
+            class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            data-action="click->query-builder#addFilter">
+        <svg class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Add Filter
+    </button>
+</div>
+
+{# Template for new filter rows (used by JavaScript) #}
+<template id="filter-row-template">
+    <div class="flex items-center space-x-2 filter-row" data-filter-index="__INDEX__">
+        <select name="filters[__INDEX__][attribute]"
+                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                data-action="change->query-builder#onAttributeChange">
+            <option value="">Select attribute...</option>
+            {% for key, label in filterBuilderData.attributes %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="filters[__INDEX__][operator]"
+                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+            {% for op, label in filterBuilderData.operators %}
+            <option value="{{ op }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="text" name="filters[__INDEX__][value]"
+               placeholder="Value..."
+               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+
+        <button type="button"
+                class="p-2 text-gray-400 hover:text-red-500 focus:outline-none"
+                data-action="click->query-builder#removeFilter"
+                data-filter-index="__INDEX__"
+                title="Remove filter">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+</template>

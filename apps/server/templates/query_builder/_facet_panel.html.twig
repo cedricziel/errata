@@ -1,0 +1,16 @@
+{# Facet Panel - Container for all facets #}
+{% for facet in facets %}
+    {% if facet.type == 'single' %}
+        {% include 'query_builder/_facet_single.html.twig' with { facet: facet } %}
+    {% elseif facet.type == 'multi' %}
+        {% include 'query_builder/_facet_multi.html.twig' with { facet: facet } %}
+    {% elseif facet.type == 'collapsible' %}
+        {% include 'query_builder/_facet_collapsible.html.twig' with { facet: facet } %}
+    {% else %}
+        {% include 'query_builder/_facet_multi.html.twig' with { facet: facet } %}
+    {% endif %}
+{% else %}
+    <div class="px-4 py-3 text-sm text-gray-500 italic">
+        No facets available
+    </div>
+{% endfor %}

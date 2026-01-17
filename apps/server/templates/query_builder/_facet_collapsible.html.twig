@@ -1,0 +1,63 @@
+{# Collapsible facet (for high-cardinality fields like user_id) #}
+<div class="facet-group" data-facet="{{ facet.attribute }}" data-facet-type="collapsible">
+    <button type="button"
+            class="w-full px-4 py-2 flex items-center justify-between text-left text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+            data-action="click->query-builder#toggleFacet"
+            data-expanded="{{ facet.expanded ? 'true' : 'false' }}">
+        <span class="flex items-center space-x-2">
+            <span>{{ facet.label }}</span>
+            <span class="text-xs text-gray-400">({{ facet.totalCount }} values)</span>
+        </span>
+        <svg class="h-4 w-4 transform transition-transform {{ facet.expanded ? 'rotate-180' : '' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+    <div class="facet-values px-4 pb-3 {{ facet.expanded ? '' : 'hidden' }}">
+        {% if facet.values|length > 0 %}
+        <div class="space-y-1">
+            {% for value in facet.values|slice(0, 5) %}
+            <label class="flex items-center justify-between cursor-pointer py-1">
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox"
+                           name="facet_{{ facet.attribute }}[]"
+                           value="{{ value.value }}"
+                           {% if value.selected %}checked{% endif %}
+                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                           data-action="change->query-builder#onFacetChange"
+                           data-facet-attribute="{{ facet.attribute }}">
+                    <span class="text-sm text-gray-700 truncate max-w-[140px]" title="{{ value.value }}">{{ value.value|default('(empty)') }}</span>
+                </div>
+                <span class="text-xs text-gray-500 ml-2">{{ value.count }}</span>
+            </label>
+            {% endfor %}
+            {% if facet.values|length > 5 %}
+            <button type="button"
+                    class="text-xs text-indigo-600 hover:text-indigo-800 mt-1"
+                    data-action="click->query-builder#showMoreFacetValues"
+                    data-facet-attribute="{{ facet.attribute }}">
+                Show {{ facet.values|length - 5 }} more...
+            </button>
+            <div class="hidden mt-1 space-y-1" data-facet-more="{{ facet.attribute }}">
+                {% for value in facet.values|slice(5) %}
+                <label class="flex items-center justify-between cursor-pointer py-1">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox"
+                               name="facet_{{ facet.attribute }}[]"
+                               value="{{ value.value }}"
+                               {% if value.selected %}checked{% endif %}
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                               data-action="change->query-builder#onFacetChange"
+                               data-facet-attribute="{{ facet.attribute }}">
+                        <span class="text-sm text-gray-700 truncate max-w-[140px]" title="{{ value.value }}">{{ value.value|default('(empty)') }}</span>
+                    </div>
+                    <span class="text-xs text-gray-500 ml-2">{{ value.count }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="text-sm text-gray-500 italic">No values</div>
+        {% endif %}
+    </div>
+</div>

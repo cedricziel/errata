@@ -24,7 +24,7 @@ class ParquetReaderService
     /**
      * Read events with Hive-style partition filtering.
      *
-     * @param array<string, mixed> $filters Additional filters to apply to event data
+     * @param array<\App\DTO\QueryBuilder\QueryFilter> $filters Additional filters to apply to event data
      *
      * @return \Generator<array<string, mixed>>
      */
@@ -46,7 +46,7 @@ class ParquetReaderService
     /**
      * Read events from a specific Parquet file.
      *
-     * @param array<string, mixed> $filters
+     * @param array<\App\DTO\QueryBuilder\QueryFilter> $filters
      *
      * @return \Generator<array<string, mixed>>
      */
@@ -80,7 +80,7 @@ class ParquetReaderService
     /**
      * Count events with Hive-style partition filtering.
      *
-     * @param array<string, mixed> $filters
+     * @param array<\App\DTO\QueryBuilder\QueryFilter> $filters
      */
     public function countEvents(
         ?string $organizationId = null,
@@ -158,7 +158,9 @@ class ParquetReaderService
         ?\DateTimeInterface $to = null,
     ): array {
         $events = [];
-        $filters = ['fingerprint' => $fingerprint];
+        $filters = [
+            new \App\DTO\QueryBuilder\QueryFilter('fingerprint', \App\DTO\QueryBuilder\QueryFilter::OPERATOR_EQ, $fingerprint),
+        ];
 
         foreach ($this->readEvents($organizationId, $projectId, $eventType, $from, $to, $filters) as $event) {
             $events[] = $event;
@@ -403,21 +405,50 @@ class ParquetReaderService
     /**
      * Check if an event matches the given filters.
      *
-     * @param array<string, mixed> $event
-     * @param array<string, mixed> $filters
+     * @param array<string, mixed>                     $event
+     * @param array<\App\DTO\QueryBuilder\QueryFilter> $filters
      */
     private function matchesFilters(array $event, array $filters): bool
     {
-        foreach ($filters as $key => $value) {
-            if (!isset($event[$key])) {
-                return false;
-            }
-
-            if ($event[$key] !== $value) {
+        foreach ($filters as $filter) {
+            if (!$this->matchesSingleFilter($event, $filter)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /**
+     * Check if an event matches a single QueryFilter.
+     *
+     * @param array<string, mixed> $event
+     */
+    private function matchesSingleFilter(array $event, \App\DTO\QueryBuilder\QueryFilter $filter): bool
+    {
+        $attribute = $filter->attribute;
+        $operator = $filter->operator;
+        $value = $filter->value;
+
+        // If the attribute doesn't exist in the event, it doesn't match
+        // (except for 'neq' where non-existent is considered "not equal")
+        if (!isset($event[$attribute]) && \App\DTO\QueryBuilder\QueryFilter::OPERATOR_NEQ !== $operator) {
+            return false;
+        }
+
+        $eventValue = $event[$attribute] ?? null;
+
+        return match ($operator) {
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_EQ => $eventValue === $value || (string) $eventValue === (string) $value,
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_NEQ => $eventValue !== $value && (string) $eventValue !== (string) $value,
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_CONTAINS => is_string($eventValue) && str_contains(strtolower($eventValue), strtolower((string) $value)),
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_STARTS_WITH => is_string($eventValue) && str_starts_with(strtolower($eventValue), strtolower((string) $value)),
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_GT => is_numeric($eventValue) && is_numeric($value) && $eventValue > $value,
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_GTE => is_numeric($eventValue) && is_numeric($value) && $eventValue >= $value,
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_LT => is_numeric($eventValue) && is_numeric($value) && $eventValue < $value,
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_LTE => is_numeric($eventValue) && is_numeric($value) && $eventValue <= $value,
+            \App\DTO\QueryBuilder\QueryFilter::OPERATOR_IN => is_array($value) && in_array($eventValue, $value, false),
+            default => $eventValue === $value,
+        };
     }
 }

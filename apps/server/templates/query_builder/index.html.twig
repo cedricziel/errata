@@ -1,0 +1,80 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Query Builder - Errata{% endblock %}
+
+{% block content %}
+<div class="space-y-6" data-controller="query-builder" data-query-builder-results-url-value="{{ path('query_results') }}" data-query-builder-facets-url-value="{{ path('query_facets') }}">
+    {# Header #}
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold text-gray-900">Query Builder</h1>
+        {% if projects is not empty %}
+        <div class="flex items-center space-x-4">
+            <label for="project-select" class="text-sm font-medium text-gray-700">Project:</label>
+            <select id="project-select" name="project"
+                    class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    data-query-builder-target="projectSelect"
+                    data-action="change->query-builder#submitQuery">
+                {% for project in projects %}
+                <option value="{{ project.publicId }}" {% if selectedProject and selectedProject.id == project.id %}selected{% endif %}>
+                    {{ project.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </div>
+
+    {# Filter Builder Section #}
+    <div class="bg-white shadow rounded-lg p-4">
+        <form id="query-form" data-query-builder-target="form" data-action="submit->query-builder#submitQuery">
+            <input type="hidden" name="project" data-query-builder-target="projectInput" value="{{ selectedProject ? selectedProject.publicId : '' }}">
+
+            {% include 'query_builder/_filters.html.twig' %}
+
+            {# Group By #}
+            <div class="mt-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <label for="group-by" class="text-sm font-medium text-gray-700">Group by:</label>
+                    <select id="group-by" name="groupBy"
+                            class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                            data-query-builder-target="groupBy"
+                            data-action="change->query-builder#submitQuery">
+                        <option value="">None</option>
+                        {% for attr in groupableAttributes %}
+                        <option value="{{ attr }}" {% if queryRequest.groupBy == attr %}selected{% endif %}>
+                            {{ filterBuilderData.attributes[attr]|default(attr) }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Run Query
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {# Main Content Area with Facets and Results #}
+    <div class="flex gap-6">
+        {# Facets Panel (Left Sidebar) #}
+        <div class="w-64 flex-shrink-0">
+            <div class="bg-white shadow rounded-lg overflow-hidden" data-query-builder-target="facetPanel">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-sm font-medium text-gray-900">Facets</h2>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% include 'query_builder/_facet_panel.html.twig' with { facets: result.facets } %}
+                </div>
+            </div>
+        </div>
+
+        {# Results Area #}
+        <div class="flex-1 min-w-0">
+            <turbo-frame id="query-results" data-query-builder-target="results">
+                {% include 'query_builder/_results.html.twig' %}
+            </turbo-frame>
+        </div>
+    </div>
+</div>
+{% endblock %}
