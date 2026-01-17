@@ -16,20 +16,20 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
-    '@hotwired/stimulus' => [
-        'version' => '3.2.2',
-    ],
     '@symfony/stimulus-bundle' => [
         'path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js',
     ],
-    '@hotwired/turbo' => [
-        'version' => '7.3.0',
-    ],
-    'chart.js' => [
-        'version' => '3.9.1',
-    ],
     '@symfony/ux-live-component' => [
         'path' => './vendor/symfony/ux-live-component/assets/dist/live_controller.js',
+    ],
+    '@hotwired/stimulus' => [
+        'version' => '3.2.2',
+    ],
+    '@hotwired/turbo' => [
+        'version' => '8.0.21',
+    ],
+    'chart.js' => [
+        'version' => '4.5.1',
     ],
     '@opentelemetry/api' => [
         'version' => '1.9.0',
@@ -41,7 +41,7 @@ return [
         'version' => '2.4.0',
     ],
     '@opentelemetry/semantic-conventions' => [
-        'version' => '1.38.0',
+        'version' => '1.39.0',
     ],
     '@opentelemetry/sdk-trace-base' => [
         'version' => '2.4.0',
@@ -108,5 +108,8 @@ return [
     ],
     '@protobufjs/pool' => [
         'version' => '1.1.0',
+    ],
+    '@kurkle/color' => [
+        'version' => '0.3.4',
     ],
 ];

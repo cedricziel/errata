@@ -1,0 +1,68 @@
+name: Update JavaScript Dependencies
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Weekly on Monday at 9am UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-importmap:
+    name: Update ImportMap Packages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('apps/server/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Update importmap packages
+        run: php bin/console importmap:update
+
+      - name: Install updated packages
+        run: php bin/console importmap:install
+
+      - name: Setup test database
+        run: |
+          mkdir -p var/data
+          touch var/data/errata.db
+          php bin/console doctrine:migrations:migrate --env=test --no-interaction
+
+      - name: Run tests
+        run: vendor/bin/phpunit
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update JavaScript dependencies'
+          title: 'chore(deps): Update JavaScript dependencies'
+          body: |
+            Automated update of JavaScript dependencies via `importmap:update`.
+
+            This PR was created automatically by the scheduled dependency update workflow.
+
+            **Please review the changes to `importmap.php` and test the frontend.**
+          branch: deps/update-importmap
+          delete-branch: true
+          labels: dependencies
