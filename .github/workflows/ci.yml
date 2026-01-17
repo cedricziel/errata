@@ -15,7 +15,7 @@ jobs:
         working-directory: apps/server
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -52,7 +52,7 @@ jobs:
         working-directory: apps/server
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -86,7 +86,7 @@ jobs:
         working-directory: packages/sdk-swift
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build Swift Package
         run: swift build
@@ -102,7 +102,7 @@ jobs:
         working-directory: apps/server
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
