@@ -13,13 +13,14 @@ use App\Repository\IssueRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Zenstruck\Browser\Test\HasBrowser;
 
 abstract class AbstractIntegrationTestCase extends WebTestCase
 {
-    protected KernelBrowser $client;
+    use HasBrowser;
+
     protected EntityManagerInterface $entityManager;
     protected UserRepository $userRepository;
     protected ProjectRepository $projectRepository;
@@ -28,8 +29,6 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
 
     protected function setUp(): void
     {
-        $this->client = static::createClient();
-
         /** @var EntityManagerInterface $em */
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $this->entityManager = $em;
@@ -182,10 +181,5 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
             'os_version' => '17.0',
             'device_model' => 'iPhone 15',
         ], $overrides);
-    }
-
-    protected function loginUser(User $user): void
-    {
-        $this->client->loginUser($user);
     }
 }

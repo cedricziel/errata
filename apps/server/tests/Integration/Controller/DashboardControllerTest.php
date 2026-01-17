@@ -11,42 +11,43 @@ class DashboardControllerTest extends AbstractIntegrationTestCase
 {
     public function testDashboardRequiresAuthentication(): void
     {
-        $this->client->request('GET', '/');
-
-        $this->assertResponseRedirects('/login');
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/')
+            ->assertRedirectedTo('/login');
     }
 
     public function testDashboardDisplaysForLoggedInUser(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
 
-        $this->client->request('GET', '/');
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/')
+            ->assertSuccessful();
     }
 
     public function testDashboardWithNoProjectsShowsEmptyState(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
 
-        $this->client->request('GET', '/');
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('body', 'Dashboard');
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/')
+            ->assertSuccessful()
+            ->assertSeeIn('body', 'Dashboard');
     }
 
     public function testDashboardWithProjectShowsProjectData(): void
     {
         $user = $this->createTestUser();
-        $project = $this->createTestProject($user, 'Test Project');
-        $this->loginUser($user);
+        $this->createTestProject($user, 'Test Project');
 
-        $this->client->request('GET', '/');
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('body', 'Dashboard');
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/')
+            ->assertSuccessful()
+            ->assertSeeIn('body', 'Dashboard');
     }
 
     public function testDashboardWithProjectAndIssuesShowsStats(): void
@@ -59,25 +60,23 @@ class DashboardControllerTest extends AbstractIntegrationTestCase
         $this->createTestIssue($project, Issue::TYPE_CRASH, Issue::STATUS_OPEN);
         $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_RESOLVED);
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/');
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/')
+            ->assertSuccessful();
     }
 
     public function testDashboardProjectSelectorWorks(): void
     {
         $user = $this->createTestUser();
-        $project1 = $this->createTestProject($user, 'Project One');
+        $this->createTestProject($user, 'Project One');
         $project2 = $this->createTestProject($user, 'Project Two');
 
-        $this->loginUser($user);
-
         // Request dashboard with specific project
-        $this->client->request('GET', '/', ['project' => $project2->getPublicId()->toRfc4122()]);
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/?project='.$project2->getPublicId()->toRfc4122())
+            ->assertSuccessful();
     }
 
     public function testDashboardChartsRenderWithData(): void
@@ -90,10 +89,9 @@ class DashboardControllerTest extends AbstractIntegrationTestCase
             $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_OPEN);
         }
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/');
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/')
+            ->assertSuccessful();
     }
 }

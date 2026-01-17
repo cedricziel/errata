@@ -11,68 +11,76 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 {
     public function testProjectIndexRequiresAuthentication(): void
     {
-        $this->client->request('GET', '/projects');
-
-        $this->assertResponseRedirects('/login');
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/projects')
+            ->assertRedirectedTo('/login');
     }
 
     public function testProjectIndexShowsUserProjects(): void
     {
         $user = $this->createTestUser();
-        $project = $this->createTestProject($user, 'My Test Project');
+        $this->createTestProject($user, 'My Test Project');
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/projects');
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('body', 'My Test Project');
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/projects')
+            ->assertSuccessful()
+            ->assertSeeIn('body', 'My Test Project');
     }
 
     public function testNewProjectFormDisplays(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
 
-        $this->client->request('GET', '/projects/new');
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/projects/new')
+            ->assertSuccessful();
     }
 
     public function testCreatingProjectWorkAndSetsOwner(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
+        $userId = $user->getId();
 
-        $this->client->request('POST', '/projects/new', [
-            'name' => 'New Project',
-            'bundle_identifier' => 'com.example.newproject',
-            'platform' => 'ios',
-        ]);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/projects/new', [
+                'body' => [
+                    'name' => 'New Project',
+                    'bundle_identifier' => 'com.example.newproject',
+                    'platform' => 'ios',
+                ],
+            ])
+            ->assertRedirected();
 
-        // Should redirect after successful creation
-        $this->assertResponseRedirects();
-
-        // Verify project was created
+        // Re-fetch user from database after browser request
+        $user = $this->userRepository->find($userId);
         $projects = $this->projectRepository->findByOwner($user);
         $this->assertCount(1, $projects);
         $this->assertSame('New Project', $projects[0]->getName());
-        $this->assertSame($user, $projects[0]->getOwner());
     }
 
     public function testNewProjectCreatesDefaultApiKeyWithIngestScope(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
+        $userId = $user->getId();
 
-        $this->client->request('POST', '/projects/new', [
-            'name' => 'Project With API Key',
-            'bundle_identifier' => 'com.example.apikey',
-        ]);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/projects/new', [
+                'body' => [
+                    'name' => 'Project With API Key',
+                    'bundle_identifier' => 'com.example.apikey',
+                ],
+            ])
+            ->assertRedirected();
 
-        $this->assertResponseRedirects();
-
-        // Verify project was created
+        // Re-fetch user from database after browser request
+        $user = $this->userRepository->find($userId);
         $projects = $this->projectRepository->findByOwner($user);
         $this->assertCount(1, $projects);
 
@@ -85,16 +93,20 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
     public function testProjectNameIsRequired(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
+        $userId = $user->getId();
 
-        $this->client->request('POST', '/projects/new', [
-            'name' => '',
-        ]);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/projects/new', [
+                'body' => [
+                    'name' => '',
+                ],
+            ])
+            ->assertRedirectedTo('/projects/new');
 
-        // Should redirect back to form with error
-        $this->assertResponseRedirects('/projects/new');
-
-        // Verify no project was created
+        // Re-fetch user from database after browser request
+        $user = $this->userRepository->find($userId);
         $projects = $this->projectRepository->findByOwner($user);
         $this->assertCount(0, $projects);
     }
@@ -104,12 +116,11 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $project = $this->createTestProject($user, 'Detail Test Project');
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/projects/'.$project->getPublicId()->toRfc4122());
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('body', 'Detail Test Project');
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/projects/'.$project->getPublicId()->toRfc4122())
+            ->assertSuccessful()
+            ->assertSeeIn('body', 'Detail Test Project');
     }
 
     public function testCannotViewOtherUsersProjectReturns403(): void
@@ -120,30 +131,33 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $project = $this->createTestProject($user1, 'User1 Project');
 
         // Login as user2
-        $this->loginUser($user2);
-
-        $this->client->request('GET', '/projects/'.$project->getPublicId()->toRfc4122());
-
-        $this->assertResponseStatusCodeSame(403);
+        $this->browser()
+            ->actingAs($user2)
+            ->visit('/projects/'.$project->getPublicId()->toRfc4122())
+            ->assertStatus(403);
     }
 
     public function testEditProjectUpdatesFields(): void
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user, 'Original Name');
+        $projectId = $project->getId();
+        $publicId = $project->getPublicId()->toRfc4122();
 
-        $this->loginUser($user);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/projects/'.$publicId.'/edit', [
+                'body' => [
+                    'name' => 'Updated Name',
+                    'bundle_identifier' => 'com.example.updated',
+                    'platform' => 'android',
+                ],
+            ])
+            ->assertRedirectedTo('/projects/'.$publicId);
 
-        $this->client->request('POST', '/projects/'.$project->getPublicId()->toRfc4122().'/edit', [
-            'name' => 'Updated Name',
-            'bundle_identifier' => 'com.example.updated',
-            'platform' => 'android',
-        ]);
-
-        $this->assertResponseRedirects('/projects/'.$project->getPublicId()->toRfc4122());
-
-        // Verify project was updated
-        $this->entityManager->refresh($project);
+        // Re-fetch project from database after browser request
+        $project = $this->projectRepository->find($projectId);
         $this->assertSame('Updated Name', $project->getName());
         $this->assertSame('com.example.updated', $project->getBundleIdentifier());
         $this->assertSame('android', $project->getPlatform());
@@ -153,21 +167,22 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $projectId = $project->getId();
+        $publicId = $project->getPublicId()->toRfc4122();
 
-        $this->loginUser($user);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/projects/'.$publicId.'/keys/new', [
+                'body' => [
+                    'label' => 'Production Key',
+                    'environment' => ApiKey::ENV_PRODUCTION,
+                ],
+            ])
+            ->assertRedirectedTo('/projects/'.$publicId);
 
-        $this->client->request(
-            'POST',
-            '/projects/'.$project->getPublicId()->toRfc4122().'/keys/new',
-            [
-                'label' => 'Production Key',
-                'environment' => ApiKey::ENV_PRODUCTION,
-            ]
-        );
-
-        $this->assertResponseRedirects('/projects/'.$project->getPublicId()->toRfc4122());
-
-        // Verify API key was created
+        // Re-fetch project from database after browser request
+        $project = $this->projectRepository->find($projectId);
         $apiKeys = $this->apiKeyRepository->findByProject($project);
         $this->assertCount(1, $apiKeys);
         $this->assertSame('Production Key', $apiKeys[0]->getLabel());
@@ -179,21 +194,20 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
         $keyData = $this->createTestApiKey($project);
+        $apiKeyId = $keyData['apiKey']->getId();
+        $publicId = $project->getPublicId()->toRfc4122();
 
         $this->assertTrue($keyData['apiKey']->isActive());
 
-        $this->loginUser($user);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/projects/'.$publicId.'/keys/'.$apiKeyId.'/revoke')
+            ->assertRedirectedTo('/projects/'.$publicId);
 
-        $this->client->request(
-            'POST',
-            '/projects/'.$project->getPublicId()->toRfc4122().'/keys/'.$keyData['apiKey']->getId().'/revoke'
-        );
-
-        $this->assertResponseRedirects('/projects/'.$project->getPublicId()->toRfc4122());
-
-        // Verify API key was deactivated
-        $this->entityManager->refresh($keyData['apiKey']);
-        $this->assertFalse($keyData['apiKey']->isActive());
+        // Re-fetch API key from database after browser request
+        $apiKey = $this->apiKeyRepository->find($apiKeyId);
+        $this->assertFalse($apiKey->isActive());
     }
 
     public function testCannotRevokeOtherUsersApiKeyReturns403(): void
@@ -203,29 +217,65 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 
         $project = $this->createTestProject($user1);
         $keyData = $this->createTestApiKey($project);
+        $apiKeyId = $keyData['apiKey']->getId();
+        $publicId = $project->getPublicId()->toRfc4122();
 
         // Login as user2
-        $this->loginUser($user2);
+        $this->browser()
+            ->actingAs($user2)
+            ->post('/projects/'.$publicId.'/keys/'.$apiKeyId.'/revoke')
+            ->assertStatus(403);
 
-        $this->client->request(
-            'POST',
-            '/projects/'.$project->getPublicId()->toRfc4122().'/keys/'.$keyData['apiKey']->getId().'/revoke'
-        );
-
-        $this->assertResponseStatusCodeSame(403);
-
-        // Verify API key was NOT deactivated
-        $this->entityManager->refresh($keyData['apiKey']);
-        $this->assertTrue($keyData['apiKey']->isActive());
+        // Re-fetch API key from database after browser request
+        $apiKey = $this->apiKeyRepository->find($apiKeyId);
+        $this->assertTrue($apiKey->isActive());
     }
 
     public function testNonExistentProjectReturns404(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
 
-        $this->client->request('GET', '/projects/00000000-0000-0000-0000-000000000000');
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/projects/00000000-0000-0000-0000-000000000000')
+            ->assertStatus(404);
+    }
 
-        $this->assertResponseStatusCodeSame(404);
+    public function testOpenTelemetrySettingsPageLoads(): void
+    {
+        $user = $this->createTestUser();
+        $project = $this->createTestProject($user);
+
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/projects/'.$project->getPublicId()->toRfc4122().'/settings/opentelemetry')
+            ->assertSuccessful()
+            ->assertSeeIn('body', 'OpenTelemetry Integration')
+            ->assertSeeIn('body', '/v1/traces')
+            ->assertSeeIn('body', '/v1/metrics')
+            ->assertSeeIn('body', '/v1/logs');
+    }
+
+    public function testOpenTelemetrySettingsRequiresAuth(): void
+    {
+        $user = $this->createTestUser();
+        $project = $this->createTestProject($user);
+
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/projects/'.$project->getPublicId()->toRfc4122().'/settings/opentelemetry')
+            ->assertRedirectedTo('/login');
+    }
+
+    public function testCannotViewOtherUsersOtelSettingsReturns403(): void
+    {
+        $user1 = $this->createTestUser('owner@example.com');
+        $user2 = $this->createTestUser('other@example.com');
+        $project = $this->createTestProject($user1);
+
+        $this->browser()
+            ->actingAs($user2)
+            ->visit('/projects/'.$project->getPublicId()->toRfc4122().'/settings/opentelemetry')
+            ->assertStatus(403);
     }
 }

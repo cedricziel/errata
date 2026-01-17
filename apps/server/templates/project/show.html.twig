@@ -182,5 +182,36 @@ Errata.shared.start(with: Configuration(
             </div>
         {% endif %}
     </div>
+
+    {# Integrations Card #}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Integrations</h2>
+            <p class="mt-1 text-sm text-gray-500">Configure how external tools send data to your project</p>
+        </div>
+        <ul role="list" class="divide-y divide-gray-200">
+            <li>
+                <a href="{{ path('settings_opentelemetry', { publicId: project.publicId }) }}"
+                   class="block px-4 py-4 sm:px-6 hover:bg-gray-50">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">OpenTelemetry</p>
+                                <p class="text-sm text-gray-500">Send traces, metrics, and logs via OTLP</p>
+                            </div>
+                        </div>
+                        <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </div>
 </div>
 {% endblock %}

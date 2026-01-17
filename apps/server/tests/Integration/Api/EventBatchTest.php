@@ -6,6 +6,7 @@ namespace App\Tests\Integration\Api;
 
 use App\Security\ApiKeyAuthenticator;
 use App\Tests\Integration\AbstractIntegrationTestCase;
+use Zenstruck\Browser\HttpOptions;
 
 class EventBatchTest extends AbstractIntegrationTestCase
 {
@@ -29,25 +30,17 @@ class EventBatchTest extends AbstractIntegrationTestCase
             $this->createValidEventPayload(['message' => 'Error 3']),
         ];
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode(['events' => $events])
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
-        $this->assertSame(3, $response['accepted']);
-        $this->assertSame(3, $response['total']);
-        $this->assertArrayNotHasKey('errors', $response);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::json(['events' => $events])
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted')
+            ->assertJsonMatches('accepted', 3)
+            ->assertJsonMatches('total', 3)
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayNotHasKey('errors', $response);
+            });
     }
 
     public function testDirectArrayFormatWorks(): void
@@ -57,24 +50,13 @@ class EventBatchTest extends AbstractIntegrationTestCase
             $this->createValidEventPayload(['message' => 'Error 2']),
         ];
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($events)
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
-        $this->assertSame(2, $response['accepted']);
-        $this->assertSame(2, $response['total']);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::json($events)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted')
+            ->assertJsonMatches('accepted', 2)
+            ->assertJsonMatches('total', 2);
     }
 
     public function testBatchExceeding100EventsReturns400(): void
@@ -84,23 +66,15 @@ class EventBatchTest extends AbstractIntegrationTestCase
             $events[] = $this->createValidEventPayload(['message' => "Error $i"]);
         }
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode(['events' => $events])
-        );
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
-        $this->assertStringContainsString('100', $response['message']);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::json(['events' => $events])
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request')
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertStringContainsString('100', $response['message']);
+            });
     }
 
     public function testPartialValidationErrorsValidEventsAccepted(): void
@@ -111,66 +85,38 @@ class EventBatchTest extends AbstractIntegrationTestCase
             $this->createValidEventPayload(['message' => 'Valid error 2']),
         ];
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode(['events' => $events])
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
-        $this->assertSame(2, $response['accepted']);
-        $this->assertSame(3, $response['total']);
-        $this->assertArrayHasKey('errors', $response);
-        $this->assertArrayHasKey(1, $response['errors']);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::json(['events' => $events])
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted')
+            ->assertJsonMatches('accepted', 2)
+            ->assertJsonMatches('total', 3)
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('errors', $response);
+                $this->assertArrayHasKey(1, $response['errors']);
+            });
     }
 
     public function testEmptyBatchReturns400(): void
     {
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode(['events' => []])
-        );
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::json(['events' => []])
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request');
     }
 
     public function testInvalidJsonReturns400(): void
     {
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            'not valid json'
-        );
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::create()
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey)
+                ->withBody('not valid json'))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request');
     }
 
     public function testMixedEventTypesInBatchWork(): void
@@ -185,24 +131,13 @@ class EventBatchTest extends AbstractIntegrationTestCase
             $this->createValidEventPayload(['event_type' => 'span', 'operation' => 'api_call', 'duration_ms' => 200.0]),
         ];
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode(['events' => $events])
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
-        $this->assertSame(5, $response['accepted']);
-        $this->assertSame(5, $response['total']);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::json(['events' => $events])
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted')
+            ->assertJsonMatches('accepted', 5)
+            ->assertJsonMatches('total', 5);
     }
 
     public function testExactly100EventsSucceeds(): void
@@ -212,23 +147,12 @@ class EventBatchTest extends AbstractIntegrationTestCase
             $events[] = $this->createValidEventPayload(['message' => "Error $i"]);
         }
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events/batch',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode(['events' => $events])
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
-        $this->assertSame(100, $response['accepted']);
-        $this->assertSame(100, $response['total']);
+        $this->browser()
+            ->post('/api/v1/events/batch', HttpOptions::json(['events' => $events])
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted')
+            ->assertJsonMatches('accepted', 100)
+            ->assertJsonMatches('total', 100);
     }
 }

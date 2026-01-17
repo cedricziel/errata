@@ -7,6 +7,7 @@ namespace App\Tests\Integration\Api;
 use App\Security\ApiKeyAuthenticator;
 use App\Tests\Integration\AbstractIntegrationTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Zenstruck\Browser\HttpOptions;
 
 class EventIngestionTest extends AbstractIntegrationTestCase
 {
@@ -24,43 +25,26 @@ class EventIngestionTest extends AbstractIntegrationTestCase
 
     public function testValidEventReturns202Accepted(): void
     {
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
-        $this->assertArrayHasKey('message', $response);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted')
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('message', $response);
+            });
     }
 
     public function testInvalidJsonReturns400(): void
     {
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            'not valid json'
-        );
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::create()
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey)
+                ->withBody('not valid json'))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request');
     }
 
     public function testEmptyEventTypeReturns400(): void
@@ -69,69 +53,45 @@ class EventIngestionTest extends AbstractIntegrationTestCase
         // so we test with an explicitly empty string which should fail validation
         $payload = ['event_type' => '', 'message' => 'Test message'];
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($payload)
-        );
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
-        $this->assertArrayHasKey('details', $response);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($payload)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request')
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('details', $response);
+            });
     }
 
     public function testInvalidEventTypeReturns400(): void
     {
         $payload = $this->createValidEventPayload(['event_type' => 'invalid_type']);
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($payload)
-        );
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
-        $this->assertArrayHasKey('details', $response);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($payload)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request')
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('details', $response);
+            });
     }
 
     public function testInvalidSeverityReturns400(): void
     {
         $payload = $this->createValidEventPayload(['severity' => 'invalid_severity']);
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($payload)
-        );
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
-        $this->assertArrayHasKey('details', $response);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($payload)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request')
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('details', $response);
+            });
     }
 
     #[DataProvider('validEventTypesProvider')]
@@ -139,22 +99,11 @@ class EventIngestionTest extends AbstractIntegrationTestCase
     {
         $payload = $this->createValidEventPayload(['event_type' => $eventType]);
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($payload)
-        );
-
-        $this->assertResponseStatusCodeSame(202, "Event type '$eventType' should be accepted");
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($payload)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted');
     }
 
     /**
@@ -176,22 +125,11 @@ class EventIngestionTest extends AbstractIntegrationTestCase
     {
         $payload = $this->createValidEventPayload(['severity' => $severity]);
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($payload)
-        );
-
-        $this->assertResponseStatusCodeSame(202, "Severity level '$severity' should be accepted");
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($payload)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted');
     }
 
     /**
@@ -221,22 +159,11 @@ class EventIngestionTest extends AbstractIntegrationTestCase
             ],
         ]);
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($payload)
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($payload)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted');
     }
 
     public function testEventWithFullMetadataSucceeds(): void
@@ -270,21 +197,10 @@ class EventIngestionTest extends AbstractIntegrationTestCase
             ],
         ];
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $this->apiKey,
-            ],
-            json_encode($payload)
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($payload)
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $this->apiKey))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted');
     }
 }

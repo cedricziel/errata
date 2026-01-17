@@ -11,24 +11,24 @@ class IssueControllerTest extends AbstractIntegrationTestCase
 {
     public function testIssueIndexRequiresAuthentication(): void
     {
-        $this->client->request('GET', '/issues');
-
-        $this->assertResponseRedirects('/login');
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/issues')
+            ->assertRedirectedTo('/login');
     }
 
     public function testIssueIndexShowsUserIssues(): void
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
-        $issue1 = $this->createTestIssue($project, Issue::TYPE_ERROR);
-        $issue2 = $this->createTestIssue($project, Issue::TYPE_CRASH);
+        $this->createTestIssue($project, Issue::TYPE_ERROR);
+        $this->createTestIssue($project, Issue::TYPE_CRASH);
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/issues');
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('body', 'Issues');
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/issues')
+            ->assertSuccessful()
+            ->assertSeeIn('body', 'Issues');
     }
 
     public function testFilterByStatusWorks(): void
@@ -36,14 +36,13 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
 
-        $openIssue = $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_OPEN);
-        $resolvedIssue = $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_RESOLVED);
+        $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_OPEN);
+        $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_RESOLVED);
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/issues', ['status' => Issue::STATUS_OPEN]);
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/issues?status='.Issue::STATUS_OPEN)
+            ->assertSuccessful();
     }
 
     public function testFilterByTypeWorks(): void
@@ -51,14 +50,13 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
 
-        $errorIssue = $this->createTestIssue($project, Issue::TYPE_ERROR);
-        $crashIssue = $this->createTestIssue($project, Issue::TYPE_CRASH);
+        $this->createTestIssue($project, Issue::TYPE_ERROR);
+        $this->createTestIssue($project, Issue::TYPE_CRASH);
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/issues', ['type' => Issue::TYPE_ERROR]);
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/issues?type='.Issue::TYPE_ERROR)
+            ->assertSuccessful();
     }
 
     public function testIssueDetailPageDisplaysCorrectly(): void
@@ -67,12 +65,11 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $project = $this->createTestProject($user);
         $issue = $this->createTestIssue($project);
 
-        $this->loginUser($user);
-
-        $this->client->request('GET', '/issues/'.$issue->getPublicId()->toRfc4122());
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('body', 'Test Issue');
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/issues/'.$issue->getPublicId()->toRfc4122())
+            ->assertSuccessful()
+            ->assertSeeIn('body', 'Test Issue');
     }
 
     public function testCannotViewOtherUsersIssuesReturns403(): void
@@ -84,22 +81,20 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $issue = $this->createTestIssue($project1);
 
         // Login as user2
-        $this->loginUser($user2);
-
-        // Try to access user1's issue
-        $this->client->request('GET', '/issues/'.$issue->getPublicId()->toRfc4122());
-
-        $this->assertResponseStatusCodeSame(403);
+        $this->browser()
+            ->actingAs($user2)
+            ->visit('/issues/'.$issue->getPublicId()->toRfc4122())
+            ->assertStatus(403);
     }
 
     public function testNonExistentIssueReturns404(): void
     {
         $user = $this->createTestUser();
-        $this->loginUser($user);
 
-        $this->client->request('GET', '/issues/00000000-0000-0000-0000-000000000000');
-
-        $this->assertResponseStatusCodeSame(404);
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/issues/00000000-0000-0000-0000-000000000000')
+            ->assertStatus(404);
     }
 
     public function testUpdateStatusToResolvedWorks(): void
@@ -107,19 +102,19 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
         $issue = $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_OPEN);
+        $issueId = $issue->getId();
+        $publicId = $issue->getPublicId()->toRfc4122();
 
-        $this->loginUser($user);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/issues/'.$publicId.'/status', [
+                'body' => ['status' => Issue::STATUS_RESOLVED],
+            ])
+            ->assertRedirectedTo('/issues/'.$publicId);
 
-        $this->client->request(
-            'POST',
-            '/issues/'.$issue->getPublicId()->toRfc4122().'/status',
-            ['status' => Issue::STATUS_RESOLVED]
-        );
-
-        $this->assertResponseRedirects('/issues/'.$issue->getPublicId()->toRfc4122());
-
-        // Verify issue was updated
-        $this->entityManager->refresh($issue);
+        // Re-fetch issue from database after browser request
+        $issue = $this->issueRepository->find($issueId);
         $this->assertSame(Issue::STATUS_RESOLVED, $issue->getStatus());
     }
 
@@ -128,19 +123,19 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
         $issue = $this->createTestIssue($project, Issue::TYPE_ERROR, Issue::STATUS_OPEN);
+        $issueId = $issue->getId();
+        $publicId = $issue->getPublicId()->toRfc4122();
 
-        $this->loginUser($user);
+        $this->browser()
+            ->actingAs($user)
+            ->interceptRedirects()
+            ->post('/issues/'.$publicId.'/status', [
+                'body' => ['status' => Issue::STATUS_IGNORED],
+            ])
+            ->assertRedirectedTo('/issues/'.$publicId);
 
-        $this->client->request(
-            'POST',
-            '/issues/'.$issue->getPublicId()->toRfc4122().'/status',
-            ['status' => Issue::STATUS_IGNORED]
-        );
-
-        $this->assertResponseRedirects('/issues/'.$issue->getPublicId()->toRfc4122());
-
-        // Verify issue was updated
-        $this->entityManager->refresh($issue);
+        // Re-fetch issue from database after browser request
+        $issue = $this->issueRepository->find($issueId);
         $this->assertSame(Issue::STATUS_IGNORED, $issue->getStatus());
     }
 
@@ -151,21 +146,19 @@ class IssueControllerTest extends AbstractIntegrationTestCase
 
         $project1 = $this->createTestProject($user1);
         $issue = $this->createTestIssue($project1, Issue::TYPE_ERROR, Issue::STATUS_OPEN);
+        $issueId = $issue->getId();
+        $publicId = $issue->getPublicId()->toRfc4122();
 
         // Login as user2
-        $this->loginUser($user2);
+        $this->browser()
+            ->actingAs($user2)
+            ->post('/issues/'.$publicId.'/status', [
+                'body' => ['status' => Issue::STATUS_RESOLVED],
+            ])
+            ->assertStatus(403);
 
-        // Try to update user1's issue
-        $this->client->request(
-            'POST',
-            '/issues/'.$issue->getPublicId()->toRfc4122().'/status',
-            ['status' => Issue::STATUS_RESOLVED]
-        );
-
-        $this->assertResponseStatusCodeSame(403);
-
-        // Verify issue was NOT updated
-        $this->entityManager->refresh($issue);
+        // Re-fetch issue from database after browser request
+        $issue = $this->issueRepository->find($issueId);
         $this->assertSame(Issue::STATUS_OPEN, $issue->getStatus());
     }
 }

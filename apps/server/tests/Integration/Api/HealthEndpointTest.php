@@ -10,52 +10,48 @@ class HealthEndpointTest extends AbstractIntegrationTestCase
 {
     public function testHealthEndpointIsPubliclyAccessible(): void
     {
-        $this->client->request('GET', '/api/v1/health');
-
-        $this->assertResponseIsSuccessful();
-        $this->assertResponseStatusCodeSame(200);
+        $this->browser()
+            ->visit('/api/v1/health')
+            ->assertSuccessful()
+            ->assertStatus(200);
     }
 
     public function testHealthEndpointReturnsCorrectJsonFormat(): void
     {
-        $this->client->request('GET', '/api/v1/health');
-
-        $this->assertResponseIsSuccessful();
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-
-        $this->assertArrayHasKey('status', $response);
-        $this->assertSame('ok', $response['status']);
-        $this->assertArrayHasKey('timestamp', $response);
+        $this->browser()
+            ->visit('/api/v1/health')
+            ->assertSuccessful()
+            ->assertJsonMatches('status', 'ok')
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('timestamp', $response);
+            });
     }
 
     public function testHealthEndpointTimestampIsValidIso8601(): void
     {
-        $this->client->request('GET', '/api/v1/health');
+        $this->browser()
+            ->visit('/api/v1/health')
+            ->assertSuccessful()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $timestamp = $response['timestamp'];
 
-        $this->assertResponseIsSuccessful();
+                // Validate ISO 8601 format (ATOM format)
+                $parsed = \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $timestamp);
 
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-
-        $timestamp = $response['timestamp'];
-
-        // Validate ISO 8601 format (ATOM format)
-        $parsed = \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $timestamp);
-
-        $this->assertNotFalse($parsed, 'Timestamp should be valid ISO 8601 (ATOM) format');
-        $this->assertSame($timestamp, $parsed->format(\DateTimeInterface::ATOM));
+                $this->assertNotFalse($parsed, 'Timestamp should be valid ISO 8601 (ATOM) format');
+                $this->assertSame($timestamp, $parsed->format(\DateTimeInterface::ATOM));
+            });
     }
 
     public function testHealthEndpointDoesNotRequireApiKey(): void
     {
         // Make request without any authentication headers
-        $this->client->request('GET', '/api/v1/health');
-
-        // Should succeed without authentication
-        $this->assertResponseIsSuccessful();
-        $this->assertResponseStatusCodeSame(200);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('ok', $response['status']);
+        $this->browser()
+            ->visit('/api/v1/health')
+            ->assertSuccessful()
+            ->assertStatus(200)
+            ->assertJsonMatches('status', 'ok');
     }
 }

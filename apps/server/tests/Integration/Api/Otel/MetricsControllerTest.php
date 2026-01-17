@@ -7,6 +7,7 @@ namespace App\Tests\Integration\Api\Otel;
 use App\Message\ProcessEvent;
 use App\Tests\Integration\AbstractIntegrationTestCase;
 use Opentelemetry\Proto\Collector\Metrics\V1\ExportMetricsServiceRequest;
+use Zenstruck\Browser\HttpOptions;
 use Zenstruck\Messenger\Test\InteractsWithMessenger;
 
 class MetricsControllerTest extends AbstractIntegrationTestCase
@@ -21,24 +22,21 @@ class MetricsControllerTest extends AbstractIntegrationTestCase
 
         $payload = $this->createValidOtlpMetricPayload();
 
-        $this->client->request('POST', '/v1/metrics', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], json_encode($payload));
-
-        $this->assertResponseStatusCodeSame(200);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('partialSuccess', $response);
+        $this->browser()
+            ->post('/v1/metrics', HttpOptions::json($payload)
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey']))
+            ->assertStatus(200)
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('partialSuccess', $response);
+            });
     }
 
     public function testMissingAuthReturns401(): void
     {
-        $this->client->request('POST', '/v1/metrics', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], '{}');
-
-        $this->assertResponseStatusCodeSame(401);
+        $this->browser()
+            ->post('/v1/metrics', HttpOptions::json([]))
+            ->assertStatus(401);
     }
 
     public function testInvalidJsonReturns400(): void
@@ -47,12 +45,12 @@ class MetricsControllerTest extends AbstractIntegrationTestCase
         $project = $this->createTestProject($user);
         $apiKeyData = $this->createTestApiKey($project);
 
-        $this->client->request('POST', '/v1/metrics', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], 'invalid json');
-
-        $this->assertResponseStatusCodeSame(400);
+        $this->browser()
+            ->post('/v1/metrics', HttpOptions::create()
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey'])
+                ->withBody('invalid json'))
+            ->assertStatus(400);
     }
 
     public function testProtobufContentTypeReturns200(): void
@@ -65,12 +63,12 @@ class MetricsControllerTest extends AbstractIntegrationTestCase
         $request->mergeFromJsonString(json_encode($this->createValidOtlpMetricPayload()));
         $protobufData = $request->serializeToString();
 
-        $this->client->request('POST', '/v1/metrics', [], [], [
-            'CONTENT_TYPE' => 'application/x-protobuf',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], $protobufData);
-
-        $this->assertResponseStatusCodeSame(200);
+        $this->browser()
+            ->post('/v1/metrics', HttpOptions::create()
+                ->withHeader('Content-Type', 'application/x-protobuf')
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey'])
+                ->withBody($protobufData))
+            ->assertStatus(200);
 
         $this->transport('async')
             ->queue()
@@ -89,12 +87,10 @@ class MetricsControllerTest extends AbstractIntegrationTestCase
 
         $payload = $this->createValidOtlpMetricPayload();
 
-        $this->client->request('POST', '/v1/metrics', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], json_encode($payload));
-
-        $this->assertResponseStatusCodeSame(200);
+        $this->browser()
+            ->post('/v1/metrics', HttpOptions::json($payload)
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey']))
+            ->assertStatus(200);
 
         $this->transport('async')
             ->queue()

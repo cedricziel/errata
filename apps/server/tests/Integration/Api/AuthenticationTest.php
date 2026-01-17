@@ -7,6 +7,7 @@ namespace App\Tests\Integration\Api;
 use App\Entity\ApiKey;
 use App\Security\ApiKeyAuthenticator;
 use App\Tests\Integration\AbstractIntegrationTestCase;
+use Zenstruck\Browser\HttpOptions;
 
 class AuthenticationTest extends AbstractIntegrationTestCase
 {
@@ -15,37 +16,18 @@ class AuthenticationTest extends AbstractIntegrationTestCase
         // When no X-Errata-Key header is present, ApiKeyAuthenticator::supports() returns false,
         // so Symfony's security access control denies access with a 401.
         // The response format depends on security exception handling, not the authenticator.
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/json'],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(401);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload()))
+            ->assertStatus(401);
     }
 
     public function testRequestWithInvalidApiKeyReturns401(): void
     {
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => 'invalid_api_key',
-            ],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(401);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertSame('authentication_failed', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, 'invalid_api_key'))
+            ->assertStatus(401)
+            ->assertJsonMatches('error', 'authentication_failed');
     }
 
     public function testRequestWithExpiredApiKeyReturns401(): void
@@ -60,23 +42,11 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             new \DateTimeImmutable('-1 day')
         );
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
-            ],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(401);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertSame('authentication_failed', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $keyData['plainKey']))
+            ->assertStatus(401)
+            ->assertJsonMatches('error', 'authentication_failed');
     }
 
     public function testRequestWithInactiveApiKeyReturns401(): void
@@ -90,23 +60,11 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             false
         );
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
-            ],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(401);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertSame('authentication_failed', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $keyData['plainKey']))
+            ->assertStatus(401)
+            ->assertJsonMatches('error', 'authentication_failed');
     }
 
     public function testRequestWithoutIngestScopeReturns401(): void
@@ -120,23 +78,11 @@ class AuthenticationTest extends AbstractIntegrationTestCase
             true
         );
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
-            ],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(401);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertSame('authentication_failed', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $keyData['plainKey']))
+            ->assertStatus(401)
+            ->assertJsonMatches('error', 'authentication_failed');
     }
 
     public function testRequestWithValidApiKeySucceeds(): void
@@ -145,22 +91,11 @@ class AuthenticationTest extends AbstractIntegrationTestCase
         $project = $this->createTestProject($user);
         $keyData = $this->createTestApiKey($project);
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
-            ],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(202);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('accepted', $response['status']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $keyData['plainKey']))
+            ->assertStatus(202)
+            ->assertJsonMatches('status', 'accepted');
     }
 
     public function testApiKeyLastUsedAtUpdatesOnUse(): void
@@ -168,47 +103,27 @@ class AuthenticationTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
         $keyData = $this->createTestApiKey($project);
+        $apiKeyId = $keyData['apiKey']->getId();
 
         $this->assertNull($keyData['apiKey']->getLastUsedAt());
 
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => $keyData['plainKey'],
-            ],
-            json_encode($this->createValidEventPayload())
-        );
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, $keyData['plainKey']))
+            ->assertStatus(202);
 
-        $this->assertResponseStatusCodeSame(202);
+        // Re-fetch the entity from the database
+        $apiKey = $this->apiKeyRepository->find($apiKeyId);
 
-        // Refresh the entity from the database
-        $this->entityManager->refresh($keyData['apiKey']);
-
-        $this->assertNotNull($keyData['apiKey']->getLastUsedAt());
+        $this->assertNotNull($apiKey->getLastUsedAt());
     }
 
     public function testEmptyApiKeyHeaderReturns401(): void
     {
-        $this->client->request(
-            'POST',
-            '/api/v1/events',
-            [],
-            [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_'.str_replace('-', '_', strtoupper(ApiKeyAuthenticator::HEADER_NAME)) => '',
-            ],
-            json_encode($this->createValidEventPayload())
-        );
-
-        $this->assertResponseStatusCodeSame(401);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertSame('authentication_failed', $response['error']);
+        $this->browser()
+            ->post('/api/v1/events', HttpOptions::json($this->createValidEventPayload())
+                ->withHeader(ApiKeyAuthenticator::HEADER_NAME, ''))
+            ->assertStatus(401)
+            ->assertJsonMatches('error', 'authentication_failed');
     }
 }

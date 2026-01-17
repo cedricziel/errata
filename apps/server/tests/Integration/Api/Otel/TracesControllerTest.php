@@ -7,6 +7,7 @@ namespace App\Tests\Integration\Api\Otel;
 use App\Message\ProcessEvent;
 use App\Tests\Integration\AbstractIntegrationTestCase;
 use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceRequest;
+use Zenstruck\Browser\HttpOptions;
 use Zenstruck\Messenger\Test\InteractsWithMessenger;
 
 class TracesControllerTest extends AbstractIntegrationTestCase
@@ -21,34 +22,29 @@ class TracesControllerTest extends AbstractIntegrationTestCase
 
         $payload = $this->createValidOtlpTracePayload();
 
-        $this->client->request('POST', '/v1/traces', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], json_encode($payload));
-
-        $this->assertResponseStatusCodeSame(200);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('partialSuccess', $response);
+        $this->browser()
+            ->post('/v1/traces', HttpOptions::json($payload)
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey']))
+            ->assertStatus(200)
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('partialSuccess', $response);
+            });
     }
 
     public function testMissingAuthReturns401(): void
     {
-        $this->client->request('POST', '/v1/traces', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], '{}');
-
-        $this->assertResponseStatusCodeSame(401);
+        $this->browser()
+            ->post('/v1/traces', HttpOptions::json([]))
+            ->assertStatus(401);
     }
 
     public function testInvalidAuthReturns401(): void
     {
-        $this->client->request('POST', '/v1/traces', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => 'invalid-key',
-        ], '{}');
-
-        $this->assertResponseStatusCodeSame(401);
+        $this->browser()
+            ->post('/v1/traces', HttpOptions::json([])
+                ->withHeader('X-Errata-Key', 'invalid-key'))
+            ->assertStatus(401);
     }
 
     public function testInvalidJsonReturns400(): void
@@ -57,15 +53,13 @@ class TracesControllerTest extends AbstractIntegrationTestCase
         $project = $this->createTestProject($user);
         $apiKeyData = $this->createTestApiKey($project);
 
-        $this->client->request('POST', '/v1/traces', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], 'invalid json');
-
-        $this->assertResponseStatusCodeSame(400);
-
-        $response = json_decode($this->client->getResponse()->getContent(), true);
-        $this->assertSame('bad_request', $response['error']);
+        $this->browser()
+            ->post('/v1/traces', HttpOptions::create()
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey'])
+                ->withBody('invalid json'))
+            ->assertStatus(400)
+            ->assertJsonMatches('error', 'bad_request');
     }
 
     public function testProtobufContentTypeReturns200(): void
@@ -78,12 +72,12 @@ class TracesControllerTest extends AbstractIntegrationTestCase
         $request->mergeFromJsonString(json_encode($this->createValidOtlpTracePayload()));
         $protobufData = $request->serializeToString();
 
-        $this->client->request('POST', '/v1/traces', [], [], [
-            'CONTENT_TYPE' => 'application/x-protobuf',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], $protobufData);
-
-        $this->assertResponseStatusCodeSame(200);
+        $this->browser()
+            ->post('/v1/traces', HttpOptions::create()
+                ->withHeader('Content-Type', 'application/x-protobuf')
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey'])
+                ->withBody($protobufData))
+            ->assertStatus(200);
 
         $this->transport('async')
             ->queue()
@@ -102,12 +96,10 @@ class TracesControllerTest extends AbstractIntegrationTestCase
 
         $payload = $this->createValidOtlpTracePayload();
 
-        $this->client->request('POST', '/v1/traces', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], json_encode($payload));
-
-        $this->assertResponseStatusCodeSame(200);
+        $this->browser()
+            ->post('/v1/traces', HttpOptions::json($payload)
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey']))
+            ->assertStatus(200);
 
         $this->transport('async')
             ->queue()
@@ -126,12 +118,10 @@ class TracesControllerTest extends AbstractIntegrationTestCase
 
         $payload = ['resourceSpans' => []];
 
-        $this->client->request('POST', '/v1/traces', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_ERRATA_KEY' => $apiKeyData['plainKey'],
-        ], json_encode($payload));
-
-        $this->assertResponseStatusCodeSame(200);
+        $this->browser()
+            ->post('/v1/traces', HttpOptions::json($payload)
+                ->withHeader('X-Errata-Key', $apiKeyData['plainKey']))
+            ->assertStatus(200);
     }
 
     /**

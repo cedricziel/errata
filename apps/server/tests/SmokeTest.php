@@ -5,54 +5,54 @@ declare(strict_types=1);
 namespace App\Tests;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Zenstruck\Browser\Test\HasBrowser;
 
 class SmokeTest extends WebTestCase
 {
+    use HasBrowser;
+
     public function testHealthEndpoint(): void
     {
-        $client = static::createClient();
-        $client->request('GET', '/api/v1/health');
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->visit('/api/v1/health')
+            ->assertSuccessful();
     }
 
     public function testLoginPageLoads(): void
     {
-        $client = static::createClient();
-        $client->request('GET', '/login');
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->visit('/login')
+            ->assertSuccessful();
     }
 
     public function testRegisterPageLoads(): void
     {
-        $client = static::createClient();
-        $client->request('GET', '/register');
-
-        $this->assertResponseIsSuccessful();
+        $this->browser()
+            ->visit('/register')
+            ->assertSuccessful();
     }
 
     public function testDashboardRequiresAuth(): void
     {
-        $client = static::createClient();
-        $client->request('GET', '/');
-
-        $this->assertResponseRedirects('/login');
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/')
+            ->assertRedirectedTo('/login');
     }
 
     public function testProjectsRequiresAuth(): void
     {
-        $client = static::createClient();
-        $client->request('GET', '/projects');
-
-        $this->assertResponseRedirects('/login');
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/projects')
+            ->assertRedirectedTo('/login');
     }
 
     public function testIssuesRequiresAuth(): void
     {
-        $client = static::createClient();
-        $client->request('GET', '/issues');
-
-        $this->assertResponseRedirects('/login');
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/issues')
+            ->assertRedirectedTo('/login');
     }
 }
