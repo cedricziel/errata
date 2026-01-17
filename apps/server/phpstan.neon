@@ -2,6 +2,9 @@ parameters:
     level: 5
     paths:
         - src
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
     ignoreErrors:
-        # Doctrine entity IDs are assigned by the ORM, not PHP code
-        - identifier: property.unusedType
+        # Doctrine entity properties are initialized before persist
+        - identifier: doctrine.columnType
+        - identifier: doctrine.associationType

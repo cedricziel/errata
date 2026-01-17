@@ -65,7 +65,7 @@ class IssueController extends AbstractController
         // Remove empty filters
         $filters = array_filter($filters, fn ($v) => null !== $v && '' !== $v);
 
-        $page = max(1, (int) $request->query->get('page', 1));
+        $page = max(1, (int) $request->query->get('page', '1'));
         $limit = 25;
         $offset = ($page - 1) * $limit;
 
