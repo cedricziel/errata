@@ -4,23 +4,23 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.5",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "doctrine/doctrine-bundle": "^3.2",
+        "doctrine/doctrine-bundle": "^3.2.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
-        "doctrine/orm": "^3.6",
+        "doctrine/orm": "^3.6.1",
         "flow-php/parquet": "^0.30.0",
         "phpdocumentor/reflection-docblock": "^6.0",
-        "phpstan/phpdoc-parser": "^2.3",
-        "symfony/apache-pack": "*",
+        "phpstan/phpdoc-parser": "^2.3.1",
+        "symfony/apache-pack": ">=1.0.1",
         "symfony/asset": "7.2.*",
         "symfony/asset-mapper": "7.2.*",
         "symfony/console": "7.2.*",
         "symfony/doctrine-messenger": "7.2.*",
         "symfony/dotenv": "7.2.*",
         "symfony/expression-language": "7.2.*",
-        "symfony/flex": "^2",
+        "symfony/flex": "^2.10",
         "symfony/form": "7.2.*",
         "symfony/framework-bundle": "7.2.*",
         "symfony/http-client": "7.2.*",
@@ -28,7 +28,7 @@
         "symfony/lock": "7.2.*",
         "symfony/mailer": "7.2.*",
         "symfony/mime": "7.2.*",
-        "symfony/monolog-bundle": "^3.0|^4.0",
+        "symfony/monolog-bundle": "^3.11.1|^4.0",
         "symfony/notifier": "7.2.*",
         "symfony/process": "7.2.*",
         "symfony/property-access": "7.2.*",
@@ -48,8 +48,8 @@
         "symfony/validator": "7.2.*",
         "symfony/web-link": "7.2.*",
         "symfony/yaml": "7.2.*",
-        "twig/extra-bundle": "^2.12|^3.0",
-        "twig/twig": "^2.12|^3.0"
+        "twig/extra-bundle": "^2.12|^3.22.2",
+        "twig/twig": "^2.12|^3.22.2"
     },
     "config": {
         "allow-plugins": {
@@ -79,7 +79,9 @@
         "symfony/polyfill-php74": "*",
         "symfony/polyfill-php80": "*",
         "symfony/polyfill-php81": "*",
-        "symfony/polyfill-php82": "*"
+        "symfony/polyfill-php82": "*",
+        "symfony/polyfill-php83": "*",
+        "symfony/polyfill-php84": "*"
     },
     "scripts": {
         "auto-scripts": {
@@ -104,17 +106,17 @@
         }
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.92",
-        "phpstan/extension-installer": "^1.4",
-        "phpstan/phpstan": "^2.1",
-        "phpstan/phpstan-doctrine": "^2.0",
-        "phpstan/phpstan-symfony": "^2.0",
-        "phpunit/phpunit": "^12.5",
-        "squizlabs/php_codesniffer": "^4.0",
+        "friendsofphp/php-cs-fixer": "^3.92.5",
+        "phpstan/extension-installer": "^1.4.3",
+        "phpstan/phpstan": "^2.1.33",
+        "phpstan/phpstan-doctrine": "^2.0.12",
+        "phpstan/phpstan-symfony": "^2.0.9",
+        "phpunit/phpunit": "^12.5.6",
+        "squizlabs/php_codesniffer": "^4.0.1",
         "symfony/browser-kit": "7.2.*",
         "symfony/css-selector": "7.2.*",
         "symfony/debug-bundle": "7.2.*",
-        "symfony/maker-bundle": "^1.0",
+        "symfony/maker-bundle": "^1.65.1",
         "symfony/stopwatch": "7.2.*",
         "symfony/web-profiler-bundle": "7.2.*"
     }

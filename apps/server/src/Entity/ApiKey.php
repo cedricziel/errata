@@ -215,9 +215,9 @@ class ApiKey
      */
     public static function generateKey(): array
     {
-        $prefix = 'err_' . bin2hex(random_bytes(4));
+        $prefix = 'err_'.bin2hex(random_bytes(4));
         $secret = bin2hex(random_bytes(24));
-        $plainKey = $prefix . '_' . $secret;
+        $plainKey = $prefix.'_'.$secret;
         $hash = hash('sha256', $plainKey);
 
         return [
