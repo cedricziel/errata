@@ -212,7 +212,7 @@
                                         {% if span.context %}
                                             <div>
                                                 <span class="font-medium text-gray-700">Context:</span>
-                                                <pre class="mt-1 bg-gray-100 p-2 rounded text-xs overflow-x-auto">{{ span.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                                <pre class="mt-1 bg-gray-100 p-2 rounded text-xs overflow-x-auto">{{ span.context is iterable ? span.context|json_encode(constant('JSON_PRETTY_PRINT')) : span.context }}</pre>
                                             </div>
                                         {% endif %}
                                     </div>
