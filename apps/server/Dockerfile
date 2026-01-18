@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Build dependencies and compile assets
 # =============================================================================
-FROM php:8.4-cli-alpine AS builder
+FROM php:8.5.2-cli-alpine AS builder
 
 RUN apk add --no-cache git unzip curl autoconf g++ make linux-headers \
     postgresql-dev libzip-dev icu-dev oniguruma-dev
@@ -24,7 +24,7 @@ RUN APP_ENV=prod APP_DEBUG=0 php bin/console cache:warmup
 # =============================================================================
 # Stage 2: Base runtime (shared by web and worker)
 # =============================================================================
-FROM php:8.4-fpm-alpine AS base
+FROM php:8.5.2-fpm-alpine AS base
 
 RUN apk add --no-cache postgresql-libs libzip icu-libs oniguruma curl fcgi
 
