@@ -34,7 +34,7 @@
         "symfony/expression-language": "7.4.*",
         "symfony/flex": "^2.10",
         "symfony/form": "7.4.*",
-        "symfony/framework-bundle": "7.4.*",
+        "symfony/framework-bundle": "8.0.*",
         "symfony/http-client": "7.4.*",
         "symfony/intl": "7.4.*",
         "symfony/lock": "7.4.*",
