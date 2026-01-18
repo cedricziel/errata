@@ -29,11 +29,20 @@ jobs:
             echo "short=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy to Dokku via SSH
+      - name: Deploy web app to Dokku
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DOKKU_HOST }}
           username: dokku
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            git:from-image errata-dev ghcr.io/cedricziel/errata/web:sha-${{ steps.sha.outputs.short }}
+            git:from-image errata-dev ghcr.io/cedricziel/errata/app:sha-${{ steps.sha.outputs.short }}
+
+      - name: Deploy worker app to Dokku
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DOKKU_HOST }}
+          username: dokku
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            git:from-image errata-dev-worker ghcr.io/cedricziel/errata/app:sha-${{ steps.sha.outputs.short }}

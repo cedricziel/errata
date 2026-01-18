@@ -174,50 +174,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for web
-        id: meta-web
+      - name: Extract metadata
+        id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/web
+          images: ghcr.io/${{ github.repository }}/app
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-
             type=ref,event=branch
 
-      - name: Build and push web image
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: apps/server
           file: apps/server/Dockerfile
           target: web
           push: true
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository }}/cache:extensions
-            type=registry,ref=ghcr.io/${{ github.repository }}/cache:web
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/cache:web,mode=max
-
-      - name: Extract metadata for worker
-        id: meta-worker
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/worker
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-
-            type=ref,event=branch
-
-      - name: Build and push worker image
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/server
-          file: apps/server/Dockerfile
-          target: worker
-          push: true
-          tags: ${{ steps.meta-worker.outputs.tags }}
-          labels: ${{ steps.meta-worker.outputs.labels }}
-          cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository }}/cache:extensions
-            type=registry,ref=ghcr.io/${{ github.repository }}/cache:worker
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/cache:worker,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository }}/cache:app
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/cache:app,mode=max
