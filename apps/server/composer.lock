@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9097a304b30faed0012b2321ffae9d38",
+    "content-hash": "1a0ef9ab3fe27522926f6718085ed528",
     "packages": [
         {
             "name": "api-platform/core",
@@ -14366,7 +14366,10 @@
     "platform": {
         "php": ">=8.5",
         "ext-ctype": "*",
-        "ext-iconv": "*"
+        "ext-iconv": "*",
+        "ext-opentelemetry": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-redis": "*"
     },
     "platform-dev": {},
     "plugin-api-version": "2.9.0"
