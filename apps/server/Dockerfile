@@ -1,19 +1,41 @@
+# syntax=docker/dockerfile:1
 # =============================================================================
-# Stage 1: Build dependencies and compile assets
+# Stage 1: Build PHP extensions (cached separately for faster rebuilds)
+# =============================================================================
+FROM php:8.5.2-cli-alpine AS extensions
+
+RUN apk add --no-cache \
+    autoconf g++ make linux-headers \
+    postgresql-dev libzip-dev icu-dev oniguruma-dev \
+    linux-headers zlib-dev grpc-dev protobuf-dev
+
+# Build native extensions
+RUN docker-php-ext-install pdo pdo_pgsql intl opcache zip mbstring ctype iconv
+
+# Build PECL extensions with cache mounts for faster rebuilds
+RUN --mount=type=cache,target=/tmp/pear \
+    --mount=type=cache,target=/root/.cache \
+    pecl install redis opentelemetry protobuf grpc \
+    && docker-php-ext-enable redis opentelemetry protobuf grpc
+
+# =============================================================================
+# Stage 2: Build application dependencies and compile assets
 # =============================================================================
 FROM php:8.5.2-cli-alpine AS builder
 
-RUN apk add --no-cache git unzip curl autoconf g++ make linux-headers \
-    postgresql-dev libzip-dev icu-dev oniguruma-dev
+RUN apk add --no-cache git unzip curl \
+    postgresql-libs libzip icu-libs oniguruma libstdc++ grpc protobuf
 
-RUN docker-php-ext-install pdo pdo_pgsql intl opcache zip mbstring ctype iconv
-RUN pecl install redis opentelemetry && docker-php-ext-enable redis opentelemetry
+# Copy pre-built extensions from extensions stage
+COPY --from=extensions /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=extensions /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+RUN --mount=type=cache,target=/root/.composer/cache \
+    composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader
 
 COPY . .
 RUN composer run-script post-install-cmd --no-interaction || true
@@ -22,18 +44,18 @@ RUN php bin/console asset-map:compile --no-interaction
 RUN APP_ENV=prod APP_DEBUG=0 php bin/console cache:warmup
 
 # =============================================================================
-# Stage 2: Base runtime (shared by web and worker)
+# Stage 3: Base runtime (shared by web and worker)
 # =============================================================================
 FROM php:8.5.2-fpm-alpine AS base
 
-RUN apk add --no-cache postgresql-libs libzip icu-libs oniguruma curl fcgi
+RUN apk add --no-cache \
+    postgresql-libs libzip icu-libs oniguruma \
+    libstdc++ grpc protobuf \
+    curl fcgi
 
-RUN apk add --no-cache --virtual .build-deps autoconf g++ make linux-headers \
-        postgresql-dev libzip-dev icu-dev oniguruma-dev \
-    && docker-php-ext-install pdo pdo_pgsql intl opcache zip mbstring ctype iconv \
-    && pecl install redis opentelemetry \
-    && docker-php-ext-enable redis opentelemetry \
-    && apk del .build-deps
+# Copy pre-built extensions from extensions stage
+COPY --from=extensions /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=extensions /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY docker/php.ini /usr/local/etc/php/conf.d/99-errata.ini
@@ -45,7 +67,7 @@ RUN mkdir -p /app/var/cache /app/var/log /app/storage \
     && chown -R www-data:www-data /app/var /app/storage /app/public
 
 # =============================================================================
-# Stage 3: Web (Nginx + PHP-FPM with Supervisor)
+# Stage 4: Web (Nginx + PHP-FPM with Supervisor)
 # =============================================================================
 FROM base AS web
 
@@ -68,7 +90,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]
 
 # =============================================================================
-# Stage 4: Worker (Messenger consumer)
+# Stage 5: Worker (Messenger consumer)
 # =============================================================================
 FROM base AS worker
 
