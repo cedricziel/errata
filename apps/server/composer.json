@@ -38,7 +38,7 @@
         "symfony/http-client": "7.4.*",
         "symfony/intl": "7.4.*",
         "symfony/lock": "7.4.*",
-        "symfony/mailer": "7.4.*",
+        "symfony/mailer": "8.0.*",
         "symfony/mime": "7.4.*",
         "symfony/monolog-bundle": "^3.11.1|^4.0.1",
         "symfony/notifier": "7.4.*",
