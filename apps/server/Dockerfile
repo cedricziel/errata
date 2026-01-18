@@ -6,11 +6,11 @@ FROM php:8.5.2-cli-alpine AS extensions
 
 RUN apk add --no-cache \
     autoconf g++ make linux-headers \
-    postgresql-dev libzip-dev icu-dev oniguruma-dev \
-    linux-headers zlib-dev grpc-dev protobuf-dev
+    postgresql-dev libzip-dev icu-dev \
+    zlib-dev grpc-dev protobuf-dev
 
-# Build native extensions (ctype, iconv are built-in to PHP 8.5)
-RUN docker-php-ext-install pdo pdo_pgsql intl opcache zip mbstring
+# Build native extensions (ctype, iconv, mbstring are built-in to PHP 8.5)
+RUN docker-php-ext-install pdo pdo_pgsql intl opcache zip
 
 # Build PECL extensions with cache mounts for faster rebuilds
 RUN --mount=type=cache,target=/tmp/pear \
