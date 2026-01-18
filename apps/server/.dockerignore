@@ -1,0 +1,15 @@
+.git
+.gitignore
+*.md
+tests/
+.phpunit.cache/
+var/cache/*
+var/log/*
+storage/*
+.idea
+.vscode
+Makefile
+deploy.php
+docker-compose*.yml
+.php-cs-fixer.cache
+phpstan.neon

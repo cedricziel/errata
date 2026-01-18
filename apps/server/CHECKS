@@ -1,3 +1,5 @@
-WAIT=5
-ATTEMPTS=6
-/
+WAIT=10
+TIMEOUT=30
+ATTEMPTS=10
+
+/api/v1/health {"status":"ok"

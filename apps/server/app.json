@@ -1,12 +1,18 @@
 {
+  "name": "errata",
+  "scripts": {
+    "dokku": {
+      "predeploy": "php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration"
+    }
+  },
   "healthchecks": {
     "web": [
       {
-        "type":        "startup",
-        "name":        "web check",
-        "description": "Checking if the app responds to the /health/ready endpoint",
-        "path":        "/api/v1/health",
-        "attempts": 3
+        "type": "startup",
+        "name": "web check",
+        "path": "/api/v1/health",
+        "attempts": 10,
+        "wait": 5
       }
     ]
   }
