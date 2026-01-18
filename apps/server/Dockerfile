@@ -10,7 +10,7 @@ RUN apk add --no-cache \
     zlib-dev protobuf-dev
 
 # Build native extensions (ctype, iconv, mbstring, pdo, opcache are built-in to PHP 8.5)
-RUN docker-php-ext-install pdo_pgsql intl zip
+RUN docker-php-ext-install pdo_pgsql intl zip bcmath
 
 # Build PECL extensions with cache mounts for faster rebuilds
 # Note: grpc PECL extension removed - not compatible with PHP 8.5 yet
