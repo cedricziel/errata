@@ -21,7 +21,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, opentelemetry
           coverage: none
 
       - name: Get Composer cache directory
@@ -58,7 +58,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, opentelemetry
           coverage: xdebug
 
       - name: Get Composer cache directory
@@ -130,7 +130,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, opentelemetry
 
       - name: Get Composer cache directory
         id: composer-cache
@@ -151,3 +151,73 @@ jobs:
 
       - name: Compile assets
         run: php bin/console asset-map:compile
+
+  docker-build:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [php-lint, php-test, assets]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for web
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/web
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+            type=ref,event=branch
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/server
+          file: apps/server/Dockerfile
+          target: web
+          push: true
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository }}/cache:extensions
+            type=registry,ref=ghcr.io/${{ github.repository }}/cache:web
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/cache:web,mode=max
+
+      - name: Extract metadata for worker
+        id: meta-worker
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/worker
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+            type=ref,event=branch
+
+      - name: Build and push worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/server
+          file: apps/server/Dockerfile
+          target: worker
+          push: true
+          tags: ${{ steps.meta-worker.outputs.tags }}
+          labels: ${{ steps.meta-worker.outputs.labels }}
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository }}/cache:extensions
+            type=registry,ref=ghcr.io/${{ github.repository }}/cache:worker
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/cache:worker,mode=max
