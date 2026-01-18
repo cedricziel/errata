@@ -3,8 +3,9 @@ updates:
   # PHP/Composer dependencies
   - package-ecosystem: "composer"
     directory: "/apps/server"
+    open-pull-requests-limit: 30
     schedule:
-      interval: "weekly"
+      interval: "daily"
     commit-message:
       prefix: "deps(php)"
     labels:
@@ -14,8 +15,9 @@ updates:
   # Swift Package dependencies
   - package-ecosystem: "swift"
     directory: "/packages/sdk-swift"
+    open-pull-requests-limit: 30
     schedule:
-      interval: "weekly"
+      interval: "daily"
     commit-message:
       prefix: "deps(swift)"
     labels:
@@ -25,8 +27,9 @@ updates:
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    open-pull-requests-limit: 30
     schedule:
-      interval: "weekly"
+      interval: "daily"
     commit-message:
       prefix: "deps(actions)"
     labels:
