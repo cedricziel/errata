@@ -7,16 +7,18 @@ FROM php:8.5.2-cli-alpine AS extensions
 RUN apk add --no-cache \
     autoconf g++ make linux-headers \
     postgresql-dev libzip-dev icu-dev \
-    zlib-dev grpc-dev protobuf-dev
+    zlib-dev protobuf-dev
 
 # Build native extensions (ctype, iconv, mbstring, pdo, opcache are built-in to PHP 8.5)
 RUN docker-php-ext-install pdo_pgsql intl zip
 
 # Build PECL extensions with cache mounts for faster rebuilds
+# Note: grpc PECL extension removed - not compatible with PHP 8.5 yet
+# OpenTelemetry OTLP exporter will use HTTP/protobuf transport instead
 RUN --mount=type=cache,target=/tmp/pear \
     --mount=type=cache,target=/root/.cache \
-    pecl install redis opentelemetry protobuf grpc \
-    && docker-php-ext-enable redis opentelemetry protobuf grpc
+    pecl install redis opentelemetry protobuf \
+    && docker-php-ext-enable redis opentelemetry protobuf
 
 # =============================================================================
 # Stage 2: Build application dependencies and compile assets
@@ -24,7 +26,7 @@ RUN --mount=type=cache,target=/tmp/pear \
 FROM php:8.5.2-cli-alpine AS builder
 
 RUN apk add --no-cache git unzip curl \
-    postgresql-libs libzip icu-libs oniguruma libstdc++ grpc protobuf
+    postgresql-libs libzip icu-libs oniguruma libstdc++ protobuf
 
 # Copy pre-built extensions from extensions stage
 COPY --from=extensions /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
@@ -50,7 +52,7 @@ FROM php:8.5.2-fpm-alpine AS base
 
 RUN apk add --no-cache \
     postgresql-libs libzip icu-libs oniguruma \
-    libstdc++ grpc protobuf \
+    libstdc++ protobuf \
     curl fcgi
 
 # Copy pre-built extensions from extensions stage
