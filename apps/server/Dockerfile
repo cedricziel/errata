@@ -9,8 +9,8 @@ RUN apk add --no-cache \
     postgresql-dev libzip-dev icu-dev oniguruma-dev \
     linux-headers zlib-dev grpc-dev protobuf-dev
 
-# Build native extensions
-RUN docker-php-ext-install pdo pdo_pgsql intl opcache zip mbstring ctype iconv
+# Build native extensions (ctype, iconv are built-in to PHP 8.5)
+RUN docker-php-ext-install pdo pdo_pgsql intl opcache zip mbstring
 
 # Build PECL extensions with cache mounts for faster rebuilds
 RUN --mount=type=cache,target=/tmp/pear \
