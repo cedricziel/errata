@@ -20,13 +20,20 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Get commit SHA
+        id: sha
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          else
+            echo "short=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Deploy to Dokku
-        uses: dokku/github-action@master
+      - name: Deploy to Dokku via SSH
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          git_remote_url: 'ssh://dokku@${{ secrets.DOKKU_HOST }}:22/errata-dev'
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          git_push_flags: '--force'
+          host: ${{ secrets.DOKKU_HOST }}
+          username: dokku
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            git:from-image errata-dev ghcr.io/cedricziel/errata/web:sha-${{ steps.sha.outputs.short }}
