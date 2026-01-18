@@ -1,0 +1,68 @@
+# -----------------------------------------------------------------------------
+# Hetzner Cloud API Token
+# -----------------------------------------------------------------------------
+# Create a token at: https://console.hetzner.cloud/projects/{project}/security/tokens
+hcloud_token = "your-hetzner-cloud-api-token"
+
+# -----------------------------------------------------------------------------
+# Location & Environment
+# -----------------------------------------------------------------------------
+location    = "nbg1"       # Nuremberg, Germany (alternatives: fsn1, hel1)
+environment = "production"
+project_name = "errata"
+
+# -----------------------------------------------------------------------------
+# Server Types
+# -----------------------------------------------------------------------------
+server_type       = "cx23"  # 2 vCPU, 4GB RAM, 40GB SSD - for web/worker
+infra_server_type = "cx23"  # 2 vCPU, 4GB RAM, 40GB SSD - for PostgreSQL + Redis
+server_image      = "ubuntu-24.04"
+
+# -----------------------------------------------------------------------------
+# Scaling Configuration
+# -----------------------------------------------------------------------------
+# Start with 1 of each, scale as needed with: terraform apply -var="web_count=2"
+web_count    = 1
+worker_count = 1
+
+# -----------------------------------------------------------------------------
+# Network Configuration
+# -----------------------------------------------------------------------------
+network_cidr = "10.0.0.0/16"
+subnet_cidr  = "10.0.1.0/24"
+
+# -----------------------------------------------------------------------------
+# SSH Configuration
+# -----------------------------------------------------------------------------
+# Paste your public SSH key here (from ~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub)
+ssh_public_key = "ssh-ed25519 AAAA... your-email@example.com"
+ssh_key_name   = "errata-deploy"
+
+# -----------------------------------------------------------------------------
+# Load Balancer
+# -----------------------------------------------------------------------------
+load_balancer_type = "lb11"  # 25 connections/sec, 10k concurrent
+
+# -----------------------------------------------------------------------------
+# Domain
+# -----------------------------------------------------------------------------
+# Your application domain - configure DNS after terraform apply
+domain = "errata.example.com"
+
+# -----------------------------------------------------------------------------
+# Object Storage
+# -----------------------------------------------------------------------------
+storage_bucket_name = "errata-parquet"
+
+# -----------------------------------------------------------------------------
+# Database Credentials (use strong passwords!)
+# -----------------------------------------------------------------------------
+# Generate with: openssl rand -base64 32
+postgres_password = "change-me-to-a-strong-password"
+redis_password    = ""  # Leave empty for no authentication (private network only)
+
+# -----------------------------------------------------------------------------
+# Application Secrets
+# -----------------------------------------------------------------------------
+# Generate with: openssl rand -hex 32
+app_secret = "change-me-to-a-random-hex-string"

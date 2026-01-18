@@ -1,0 +1,93 @@
+#cloud-config
+# Worker server: PHP 8.5 CLI + Supervisor
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - gnupg
+  - lsb-release
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - git
+  - supervisor
+  - acl
+
+# Create deploy user
+users:
+  - name: deploy
+    groups: sudo
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+write_files:
+  # Supervisor configuration for Symfony Messenger workers
+  - path: /etc/supervisor/conf.d/errata-worker.conf
+    content: |
+      [program:errata-worker]
+      process_name=%(program_name)s_%(process_num)02d
+      command=php /var/www/errata/current/bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+      autostart=true
+      autorestart=true
+      stopasgroup=true
+      killasgroup=true
+      user=deploy
+      numprocs=2
+      redirect_stderr=true
+      stdout_logfile=/var/www/errata/shared/var/log/worker_%(process_num)02d.log
+      stdout_logfile_maxbytes=10MB
+      stdout_logfile_backups=5
+      stopwaitsecs=60
+      environment=APP_ENV="prod"
+    defer: true
+
+  # UFW rules script
+  - path: /tmp/setup-firewall.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      ufw default deny incoming
+      ufw default allow outgoing
+      ufw allow 22/tcp
+      ufw --force enable
+
+  # Deployer directory setup script
+  - path: /tmp/setup-deployer.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      mkdir -p /var/www/errata/{releases,shared}
+      mkdir -p /var/www/errata/shared/{var/log,var/data,storage}
+      chown -R deploy:deploy /var/www/errata
+      chmod -R 775 /var/www/errata
+
+runcmd:
+  # Add PHP repository
+  - add-apt-repository -y ppa:ondrej/php
+  - apt-get update
+
+  # Install PHP 8.5 CLI and extensions (no FPM needed)
+  - apt-get install -y php8.5-cli php8.5-common php8.5-curl php8.5-mbstring php8.5-xml php8.5-zip php8.5-pgsql php8.5-redis php8.5-intl php8.5-apcu
+
+  # Setup deployer directories
+  - /tmp/setup-deployer.sh
+
+  # Install Composer
+  - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+  # Configure Supervisor
+  - systemctl enable supervisor
+  - systemctl start supervisor
+
+  # Setup firewall
+  - /tmp/setup-firewall.sh
+
+  # Enable automatic security updates
+  - systemctl enable unattended-upgrades
+  - systemctl start unattended-upgrades
+
+final_message: "Worker server setup complete after $UPTIME seconds"
