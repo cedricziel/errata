@@ -1493,7 +1493,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     inflector?: scalar|null|Param, // Specify an inflector to use. // Default: "api_platform.metadata.inflector"
  *     validator?: array{
  *         serialize_payload_fields?: mixed, // Set to null to serialize all payload fields when a validation error is thrown, or set the fields you want to include explicitly. // Default: []
- *         query_parameter_validation?: bool|Param, // Default: true
+ *         query_parameter_validation?: bool|Param, // Deprecated: Will be removed in API Platform 5.0. // Default: true
  *     },
  *     eager_loading?: bool|array{
  *         enabled?: bool|Param, // Default: true
@@ -1503,6 +1503,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     },
  *     handle_symfony_errors?: bool|Param, // Allows to handle symfony exceptions. // Default: false
  *     enable_swagger?: bool|Param, // Enable the Swagger documentation and export. // Default: true
+ *     enable_json_streamer?: bool|Param, // Enable json streamer. // Default: false
  *     enable_swagger_ui?: bool|Param, // Enable Swagger UI // Default: true
  *     enable_re_doc?: bool|Param, // Enable ReDoc // Default: true
  *     enable_entrypoint?: bool|Param, // Enable the entrypoint // Default: true
@@ -1524,6 +1525,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         },
  *     },
  *     mapping?: array{
+ *         imports?: list<scalar|null|Param>,
  *         paths?: list<scalar|null|Param>,
  *     },
  *     resource_class_directories?: list<scalar|null|Param>,
@@ -1621,9 +1623,12 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         license?: array{
  *             name?: scalar|null|Param, // The license name used for the API. // Default: null
  *             url?: scalar|null|Param, // URL to the license used for the API. MUST be in the format of a URL. // Default: null
+ *             identifier?: scalar|null|Param, // An SPDX license expression for the API. The identifier field is mutually exclusive of the url field. // Default: null
  *         },
  *         swagger_ui_extra_configuration?: mixed, // To pass extra configuration to Swagger UI, like docExpansion or filter. // Default: []
  *         overrideResponses?: bool|Param, // Whether API Platform adds automatic responses to the OpenAPI documentation. // Default: true
+ *         error_resource_class?: scalar|null|Param, // The class used to represent errors in the OpenAPI documentation. // Default: null
+ *         validation_error_resource_class?: scalar|null|Param, // The class used to represent validation errors in the OpenAPI documentation. // Default: null
  *     },
  *     maker?: bool|array{
  *         enabled?: bool|Param, // Default: true
@@ -1714,7 +1719,9 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         parameters?: mixed,
  *         strict_query_parameter_validation?: mixed,
  *         hide_hydra_operation?: mixed,
+ *         json_stream?: mixed,
  *         extra_properties?: mixed,
+ *         map?: mixed,
  *         route_name?: mixed,
  *         errors?: mixed,
  *         read?: mixed,
