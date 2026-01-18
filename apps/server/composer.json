@@ -53,7 +53,7 @@
         "symfony/string": "7.4.*",
         "symfony/translation": "7.4.*",
         "symfony/twig-bundle": "7.4.*",
-        "symfony/uid": "7.4.*",
+        "symfony/uid": "8.0.*",
         "symfony/ux-chartjs": "^2.32",
         "symfony/ux-live-component": "^2.32",
         "symfony/ux-turbo": "^2.32",
