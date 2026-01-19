@@ -21,7 +21,7 @@ doctrine:
             auto_mapping: false
         dql:
             string_functions:
-                DATE: DoctrineExtensions\Query\Sqlite\Date
+                DATE: DoctrineExtensions\Query\Postgresql\Date
         filters:
             organization:
                 class: App\Doctrine\Filter\OrganizationFilter
