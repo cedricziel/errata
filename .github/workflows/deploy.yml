@@ -54,7 +54,11 @@ jobs:
             local app=$1
             local image=$2
             ssh dokku@$HOST builder:set $app build-dir ""
-            ssh dokku@$HOST git:from-image --force $app $image
+            # git:from-image returns 1 if no changes, so rebuild in that case
+            if ! ssh dokku@$HOST git:from-image --force $app $image; then
+              echo "No changes detected for $app, rebuilding from existing source..."
+              ssh dokku@$HOST ps:rebuild $app
+            fi
           }
 
           # Rollback function
