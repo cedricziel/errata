@@ -30,7 +30,7 @@ jobs:
           fi
 
       - name: Deploy to Dokku
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.DOKKU_HOST }}
           username: dokku
