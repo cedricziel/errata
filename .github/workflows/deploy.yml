@@ -36,12 +36,86 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.DOKKU_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy web app
+      - name: Deploy web and worker
         run: |
-          ssh dokku@${{ secrets.DOKKU_HOST }} builder:set errata-dev build-dir ""
-          ssh dokku@${{ secrets.DOKKU_HOST }} git:from-image --force errata-dev ghcr.io/cedricziel/errata/app-dev:sha-${{ steps.sha.outputs.short }}
+          HOST="${{ secrets.DOKKU_HOST }}"
+          IMAGE_TAG="sha-${{ steps.sha.outputs.short }}"
 
-      - name: Deploy worker
-        run: |
-          ssh dokku@${{ secrets.DOKKU_HOST }} builder:set errata-dev-worker build-dir ""
-          ssh dokku@${{ secrets.DOKKU_HOST }} git:from-image --force errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:sha-${{ steps.sha.outputs.short }}
+          # Capture current image tags for rollback
+          echo "Capturing current state for rollback..."
+          WEB_PREV=$(ssh dokku@$HOST config:get errata-dev GIT_REV 2>/dev/null || echo "")
+          WORKER_PREV=$(ssh dokku@$HOST config:get errata-dev-worker GIT_REV 2>/dev/null || echo "")
+
+          echo "Previous web: $WEB_PREV"
+          echo "Previous worker: $WORKER_PREV"
+
+          # Deploy function
+          deploy_app() {
+            local app=$1
+            local image=$2
+            ssh dokku@$HOST builder:set $app build-dir ""
+            ssh dokku@$HOST git:from-image --force $app $image
+          }
+
+          # Rollback function
+          rollback() {
+            echo "Rolling back deployments..."
+            if [ -n "$WEB_PREV" ]; then
+              echo "Rolling back web to $WEB_PREV"
+              ssh dokku@$HOST git:from-image --force errata-dev ghcr.io/cedricziel/errata/app-dev:sha-${WEB_PREV:0:7} || true
+            fi
+            if [ -n "$WORKER_PREV" ]; then
+              echo "Rolling back worker to $WORKER_PREV"
+              ssh dokku@$HOST git:from-image --force errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:sha-${WORKER_PREV:0:7} || true
+            fi
+          }
+
+          # Deploy both in parallel
+          echo "Deploying web and worker in parallel..."
+          deploy_app errata-dev ghcr.io/cedricziel/errata/app-dev:$IMAGE_TAG &
+          WEB_PID=$!
+
+          deploy_app errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:$IMAGE_TAG &
+          WORKER_PID=$!
+
+          # Wait for both
+          wait $WEB_PID
+          WEB_EXIT=$?
+          wait $WORKER_PID
+          WORKER_EXIT=$?
+
+          # Check deploy results
+          if [ $WEB_EXIT -ne 0 ] || [ $WORKER_EXIT -ne 0 ]; then
+            echo "Deploy failed: web=$WEB_EXIT worker=$WORKER_EXIT"
+            rollback
+            exit 1
+          fi
+
+          echo "Deployments complete, checking health..."
+
+          # Health check for web app
+          sleep 5
+          WEB_HEALTHY=false
+          for i in 1 2 3 4 5; do
+            if ssh dokku@$HOST checks:run errata-dev 2>/dev/null; then
+              WEB_HEALTHY=true
+              break
+            fi
+            echo "Web health check attempt $i failed, retrying..."
+            sleep 10
+          done
+
+          # Health check for worker (process running)
+          WORKER_HEALTHY=false
+          if ssh dokku@$HOST ps:report errata-dev-worker 2>/dev/null | grep -q "running"; then
+            WORKER_HEALTHY=true
+          fi
+
+          # Rollback if unhealthy
+          if [ "$WEB_HEALTHY" != "true" ] || [ "$WORKER_HEALTHY" != "true" ]; then
+            echo "Health check failed: web=$WEB_HEALTHY worker=$WORKER_HEALTHY"
+            rollback
+            exit 1
+          fi
+
+          echo "All deployments healthy!"
