@@ -6,6 +6,7 @@ namespace App\EventSubscriber;
 
 use App\Service\Telemetry\TracerFactory;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
@@ -17,6 +18,17 @@ use Symfony\Component\HttpKernel\KernelEvents;
  */
 final class TracerShutdownSubscriber implements EventSubscriberInterface
 {
+    /**
+     * Routes to exclude from trace flushing to prevent infinite loops.
+     * These are the OTEL ingestion endpoints - flushing on these would
+     * create new requests to the same endpoints.
+     */
+    private const EXCLUDED_ROUTES = [
+        'otel_traces',
+        'otel_logs',
+        'otel_metrics',
+    ];
+
     public function __construct(
         private readonly TracerFactory $tracerFactory,
     ) {
@@ -29,10 +41,18 @@ final class TracerShutdownSubscriber implements EventSubscriberInterface
         ];
     }
 
-    public function onKernelTerminate(): void
+    public function onKernelTerminate(TerminateEvent $event): void
     {
-        if ($this->tracerFactory->isEnabled()) {
-            $this->tracerFactory->forceFlush();
+        if (!$this->tracerFactory->isEnabled()) {
+            return;
         }
+
+        // Skip flushing for OTEL ingestion endpoints to prevent infinite loops
+        $route = $event->getRequest()->attributes->get('_route');
+        if (\in_array($route, self::EXCLUDED_ROUTES, true)) {
+            return;
+        }
+
+        $this->tracerFactory->forceFlush();
     }
 }
