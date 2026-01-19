@@ -36,4 +36,10 @@ jobs:
           username: dokku
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            git:from-image errata-dev ghcr.io/cedricziel/errata/app:sha-${{ steps.sha.outputs.short }}
+            # Deploy web app
+            builder:set errata-dev build-dir ""
+            git:from-image errata-dev ghcr.io/cedricziel/errata/app-dev:sha-${{ steps.sha.outputs.short }}
+
+            # Deploy worker
+            builder:set errata-dev-worker build-dir ""
+            git:from-image errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:sha-${{ steps.sha.outputs.short }}

@@ -157,13 +157,24 @@ jobs:
         run: php bin/console asset-map:compile
 
   docker-build:
-    name: Build & Push Docker Images
+    name: Docker ${{ matrix.target }}
     runs-on: ubuntu-latest
     needs: [php-lint, php-test, assets]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: web-prod
+            image: app
+          - target: worker-prod
+            image: worker
+          - target: web-dev
+            image: app-dev
+          - target: worker-dev
+            image: worker-dev
 
     steps:
       - uses: actions/checkout@v6
@@ -182,22 +193,23 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/app
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image }}
           tags: |
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-
             type=ref,event=branch
+            type=ref,event=pr
 
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: apps/server
           file: apps/server/Dockerfile
-          target: web-prod
-          push: true
+          target: ${{ matrix.target }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository }}/cache:extensions
-            type=registry,ref=ghcr.io/${{ github.repository }}/cache:app
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/cache:app,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository }}/cache:${{ matrix.target }}
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/cache:${{ matrix.target }},mode=max
