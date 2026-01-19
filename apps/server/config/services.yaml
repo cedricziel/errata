@@ -24,7 +24,7 @@ parameters:
     otel.server.exporter_endpoint: '%env(string:OTEL_EXPORTER_OTLP_ENDPOINT)%'
     otel.server.sampler_type: '%env(string:OTEL_TRACES_SAMPLER)%'
     otel.server.sampler_arg: '%env(float:OTEL_TRACES_SAMPLER_ARG)%'
-    otel.server.exporter_api_key: '%env(string:OTEL_EXPORTER_API_KEY)%'
+    otel.server.exporter_headers: '%env(string:OTEL_EXPORTER_OTLP_HEADERS)%'
 
 services:
     # default configuration for services in *this* file
@@ -60,7 +60,7 @@ services:
             $samplerType: '%otel.server.sampler_type%'
             $samplerArg: '%otel.server.sampler_arg%'
             $environment: '%kernel.environment%'
-            $apiKey: '%otel.server.exporter_api_key%'
+            $exporterHeaders: '%otel.server.exporter_headers%'
 
     OpenTelemetry\API\Trace\TracerInterface:
         factory: ['@App\Service\Telemetry\TracerFactory', 'createTracer']

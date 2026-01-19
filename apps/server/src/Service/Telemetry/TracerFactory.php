@@ -35,7 +35,7 @@ final class TracerFactory
         private readonly string $samplerType,
         private readonly float $samplerArg,
         private readonly string $environment,
-        private readonly ?string $apiKey = null,
+        private readonly string $exporterHeaders = '',
     ) {
     }
 
@@ -136,11 +136,8 @@ final class TracerFactory
             return new ConsoleSpanExporter($transport);
         }
 
-        // Build headers array with optional API key authentication
-        $headers = [];
-        if (null !== $this->apiKey && '' !== $this->apiKey) {
-            $headers['X-Errata-Key'] = $this->apiKey;
-        }
+        // Parse OTEL_EXPORTER_OTLP_HEADERS format: key1=value1,key2=value2
+        $headers = $this->parseHeaders($this->exporterHeaders);
 
         // OTLP HTTP exporter with JSON format
         $transport = (new \OpenTelemetry\Contrib\Otlp\OtlpHttpTransportFactory())->create(
@@ -150,6 +147,28 @@ final class TracerFactory
         );
 
         return new \OpenTelemetry\Contrib\Otlp\SpanExporter($transport);
+    }
+
+    /**
+     * Parse OTEL_EXPORTER_OTLP_HEADERS format: key1=value1,key2=value2.
+     *
+     * @return array<string, string>
+     */
+    private function parseHeaders(string $headersString): array
+    {
+        $headers = [];
+        if ('' === $headersString) {
+            return $headers;
+        }
+
+        foreach (explode(',', $headersString) as $header) {
+            $parts = explode('=', $header, 2);
+            if (2 === \count($parts)) {
+                $headers[trim($parts[0])] = trim($parts[1]);
+            }
+        }
+
+        return $headers;
     }
 
     private function createSampler(): \OpenTelemetry\SDK\Trace\SamplerInterface
