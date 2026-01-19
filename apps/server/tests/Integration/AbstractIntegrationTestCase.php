@@ -75,19 +75,8 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
     {
         $connection = $this->entityManager->getConnection();
 
-        // Disable foreign key checks for SQLite
-        $connection->executeStatement('PRAGMA foreign_keys = OFF');
-
-        // Clear tables in order that respects foreign keys
-        $connection->executeStatement('DELETE FROM api_keys');
-        $connection->executeStatement('DELETE FROM issues');
-        $connection->executeStatement('DELETE FROM projects');
-        $connection->executeStatement('DELETE FROM organization_memberships');
-        $connection->executeStatement('DELETE FROM organizations');
-        $connection->executeStatement('DELETE FROM users');
-
-        // Re-enable foreign key checks
-        $connection->executeStatement('PRAGMA foreign_keys = ON');
+        // Use TRUNCATE with CASCADE for PostgreSQL (handles FK constraints automatically)
+        $connection->executeStatement('TRUNCATE TABLE api_keys, issues, projects, organization_memberships, organizations, users RESTART IDENTITY CASCADE');
 
         $this->entityManager->clear();
     }
