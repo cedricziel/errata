@@ -39,9 +39,9 @@ jobs:
       - name: Deploy web app
         run: |
           ssh dokku@${{ secrets.DOKKU_HOST }} builder:set errata-dev build-dir ""
-          ssh dokku@${{ secrets.DOKKU_HOST }} git:from-image errata-dev ghcr.io/cedricziel/errata/app-dev:sha-${{ steps.sha.outputs.short }}
+          ssh dokku@${{ secrets.DOKKU_HOST }} git:from-image --force errata-dev ghcr.io/cedricziel/errata/app-dev:sha-${{ steps.sha.outputs.short }}
 
       - name: Deploy worker
         run: |
           ssh dokku@${{ secrets.DOKKU_HOST }} builder:set errata-dev-worker build-dir ""
-          ssh dokku@${{ secrets.DOKKU_HOST }} git:from-image errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:sha-${{ steps.sha.outputs.short }}
+          ssh dokku@${{ secrets.DOKKU_HOST }} git:from-image --force errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:sha-${{ steps.sha.outputs.short }}
