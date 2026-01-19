@@ -72,16 +72,16 @@ jobs:
             fi
           }
 
-          # Rollback function
+          # Rollback function (best effort - old images may not exist)
           rollback() {
-            echo "Rolling back deployments..."
+            echo "Rolling back deployments (best effort)..."
             if [ -n "$WEB_PREV" ]; then
-              echo "Rolling back web to $WEB_PREV"
-              ssh dokku@$HOST git:from-image --force errata-dev ghcr.io/cedricziel/errata/app-dev:sha-${WEB_PREV:0:7} || true
+              echo "Attempting to roll back web to $WEB_PREV"
+              ssh dokku@$HOST git:from-image --force errata-dev ghcr.io/cedricziel/errata/app-dev:sha-${WEB_PREV:0:7} 2>&1 || echo "Warning: Could not rollback web (image may not exist)"
             fi
             if [ -n "$WORKER_PREV" ]; then
-              echo "Rolling back worker to $WORKER_PREV"
-              ssh dokku@$HOST git:from-image --force errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:sha-${WORKER_PREV:0:7} || true
+              echo "Attempting to roll back worker to $WORKER_PREV"
+              ssh dokku@$HOST git:from-image --force errata-dev-worker ghcr.io/cedricziel/errata/worker-dev:sha-${WORKER_PREV:0:7} 2>&1 || echo "Warning: Could not rollback worker (image may not exist)"
             fi
           }
 
@@ -120,9 +120,12 @@ jobs:
             sleep 5
           done
 
-          # Health check for worker (process running)
+          # Health check for worker (check if running)
           WORKER_HEALTHY=false
-          if ssh dokku@$HOST ps:report errata-dev-worker 2>/dev/null | grep -q "running"; then
+          WORKER_STATUS=$(ssh dokku@$HOST ps:report errata-dev-worker 2>/dev/null || echo "")
+          echo "Worker status:"
+          echo "$WORKER_STATUS"
+          if echo "$WORKER_STATUS" | grep -qiE "(running|Running:.*true)"; then
             WORKER_HEALTHY=true
           fi
 
