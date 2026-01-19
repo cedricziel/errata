@@ -35,16 +35,27 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.DOKKU_HOST }} >> ~/.ssh/known_hosts
+          # Enable SSH connection multiplexing for faster subsequent connections
+          cat >> ~/.ssh/config << 'SSHEOF'
+          Host *
+            ControlMaster auto
+            ControlPath ~/.ssh/sockets/%r@%h-%p
+            ControlPersist 600
+          SSHEOF
+          mkdir -p ~/.ssh/sockets
 
       - name: Deploy web and worker
         run: |
           HOST="${{ secrets.DOKKU_HOST }}"
           IMAGE_TAG="sha-${{ steps.sha.outputs.short }}"
 
-          # Capture current image tags for rollback
+          # Capture current image tags for rollback (in parallel)
           echo "Capturing current state for rollback..."
-          WEB_PREV=$(ssh dokku@$HOST config:get errata-dev GIT_REV 2>/dev/null || echo "")
-          WORKER_PREV=$(ssh dokku@$HOST config:get errata-dev-worker GIT_REV 2>/dev/null || echo "")
+          ssh dokku@$HOST config:get errata-dev GIT_REV 2>/dev/null > /tmp/web_prev &
+          ssh dokku@$HOST config:get errata-dev-worker GIT_REV 2>/dev/null > /tmp/worker_prev &
+          wait
+          WEB_PREV=$(cat /tmp/web_prev 2>/dev/null || echo "")
+          WORKER_PREV=$(cat /tmp/worker_prev 2>/dev/null || echo "")
 
           echo "Previous web: $WEB_PREV"
           echo "Previous worker: $WORKER_PREV"
@@ -97,16 +108,16 @@ jobs:
 
           echo "Deployments complete, checking health..."
 
-          # Health check for web app
-          sleep 5
+          # Health check for web app (reduced delays)
+          sleep 2
           WEB_HEALTHY=false
-          for i in 1 2 3 4 5; do
+          for i in 1 2 3; do
             if ssh dokku@$HOST checks:run errata-dev 2>/dev/null; then
               WEB_HEALTHY=true
               break
             fi
             echo "Web health check attempt $i failed, retrying..."
-            sleep 10
+            sleep 5
           done
 
           # Health check for worker (process running)
