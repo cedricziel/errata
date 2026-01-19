@@ -7,7 +7,7 @@ namespace App\Controller\Api;
 use App\DTO\WideEventPayload;
 use App\Message\ProcessEvent;
 use App\Security\ApiKeyAuthenticator;
-use App\Service\Telemetry\TracerFactory;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,7 +24,6 @@ class EventController extends AbstractController
     public function __construct(
         private readonly MessageBusInterface $messageBus,
         private readonly ValidatorInterface $validator,
-        private readonly TracerFactory $tracerFactory,
     ) {
     }
 
@@ -47,7 +46,7 @@ class EventController extends AbstractController
             }
 
             $projectId = $project->getPublicId()->toRfc4122();
-            $span?->setAttribute('project.id', $projectId);
+            $span->setAttribute('project.id', $projectId);
 
             $data = json_decode($request->getContent(), true);
 
@@ -72,7 +71,7 @@ class EventController extends AbstractController
             }
 
             $eventType = $payload->eventType ?? 'unknown';
-            $span?->setAttribute('event.type', $eventType);
+            $span->setAttribute('event.type', $eventType);
 
             // Dispatch event for async processing
             $this->messageBus->dispatch(new ProcessEvent(
@@ -81,14 +80,14 @@ class EventController extends AbstractController
                 environment: $apiKey->getEnvironment(),
             ));
 
-            $span?->setStatus(StatusCode::STATUS_OK);
+            $span->setStatus(StatusCode::STATUS_OK);
 
             return new JsonResponse([
                 'status' => 'accepted',
                 'message' => 'Event queued for processing',
             ], Response::HTTP_ACCEPTED);
         } finally {
-            $span?->end();
+            $span->end();
         }
     }
 
@@ -111,7 +110,7 @@ class EventController extends AbstractController
             }
 
             $projectId = $project->getPublicId()->toRfc4122();
-            $span?->setAttribute('project.id', $projectId);
+            $span->setAttribute('project.id', $projectId);
 
             $data = json_decode($request->getContent(), true);
 
@@ -131,7 +130,7 @@ class EventController extends AbstractController
             }
 
             $batchSize = count($events);
-            $span?->setAttribute('batch.size', $batchSize);
+            $span->setAttribute('batch.size', $batchSize);
 
             // Limit batch size
             if ($batchSize > 100) {
@@ -171,9 +170,9 @@ class EventController extends AbstractController
                 ++$accepted;
             }
 
-            $span?->setAttribute('batch.accepted', $accepted);
-            $span?->setAttribute('batch.errors', count($errors));
-            $span?->setStatus(StatusCode::STATUS_OK);
+            $span->setAttribute('batch.accepted', $accepted);
+            $span->setAttribute('batch.errors', count($errors));
+            $span->setStatus(StatusCode::STATUS_OK);
 
             $response = [
                 'status' => 'accepted',
@@ -187,7 +186,7 @@ class EventController extends AbstractController
 
             return new JsonResponse($response, Response::HTTP_ACCEPTED);
         } finally {
-            $span?->end();
+            $span->end();
         }
     }
 
@@ -203,20 +202,16 @@ class EventController extends AbstractController
         ]);
     }
 
-    private function startSpan(string $name): ?SpanInterface
+    private function startSpan(string $name): SpanInterface
     {
-        if (!$this->tracerFactory->isEnabled()) {
-            return null;
-        }
-
-        return $this->tracerFactory->createTracer('api')
+        return Globals::tracerProvider()->getTracer('errata')
             ->spanBuilder($name)
             ->startSpan();
     }
 
-    private function setSpanError(?SpanInterface $span, string $message): void
+    private function setSpanError(SpanInterface $span, string $message): void
     {
-        $span?->setStatus(StatusCode::STATUS_ERROR, $message);
+        $span->setStatus(StatusCode::STATUS_ERROR, $message);
     }
 
     /**

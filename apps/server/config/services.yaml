@@ -17,15 +17,6 @@ parameters:
     otel.frontend.service_name: '%env(string:OTEL_FRONTEND_SERVICE_NAME)%'
     otel.frontend.service_version: '%env(string:OTEL_FRONTEND_SERVICE_VERSION)%'
 
-    # OpenTelemetry server tracing configuration
-    otel.server.enabled: '%env(bool:OTEL_ENABLED)%'
-    otel.server.service_name: '%env(string:OTEL_SERVICE_NAME)%'
-    otel.server.service_version: '%env(string:OTEL_SERVICE_VERSION)%'
-    otel.server.exporter_endpoint: '%env(string:OTEL_EXPORTER_OTLP_ENDPOINT)%'
-    otel.server.sampler_type: '%env(string:OTEL_TRACES_SAMPLER)%'
-    otel.server.sampler_arg: '%env(float:OTEL_TRACES_SAMPLER_ARG)%'
-    otel.server.exporter_headers: '%env(string:OTEL_EXPORTER_OTLP_HEADERS)%'
-
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -49,18 +40,3 @@ services:
             $otelServiceName: '%otel.frontend.service_name%'
             $otelServiceVersion: '%otel.frontend.service_version%'
         tags: ['twig.extension']
-
-    # OpenTelemetry server tracing
-    App\Service\Telemetry\TracerFactory:
-        arguments:
-            $enabled: '%otel.server.enabled%'
-            $serviceName: '%otel.server.service_name%'
-            $serviceVersion: '%otel.server.service_version%'
-            $exporterEndpoint: '%otel.server.exporter_endpoint%'
-            $samplerType: '%otel.server.sampler_type%'
-            $samplerArg: '%otel.server.sampler_arg%'
-            $environment: '%kernel.environment%'
-            $exporterHeaders: '%otel.server.exporter_headers%'
-
-    OpenTelemetry\API\Trace\TracerInterface:
-        factory: ['@App\Service\Telemetry\TracerFactory', 'createTracer']

@@ -10,7 +10,7 @@ use App\Repository\IssueRepository;
 use App\Repository\ProjectRepository;
 use App\Service\FingerprintService;
 use App\Service\Parquet\ParquetWriterService;
-use App\Service\Telemetry\TracerFactory;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
@@ -29,7 +29,6 @@ class ProcessEventHandler
         private readonly FingerprintService $fingerprintService,
         private readonly ParquetWriterService $parquetWriter,
         private readonly LoggerInterface $logger,
-        private readonly TracerFactory $tracerFactory,
     ) {
     }
 
@@ -38,8 +37,8 @@ class ProcessEventHandler
         $span = $this->startSpan('process_event');
         $eventType = $message->eventData['event_type'] ?? 'unknown';
 
-        $span?->setAttribute('project.id', $message->projectId);
-        $span?->setAttribute('event.type', $eventType);
+        $span->setAttribute('project.id', $message->projectId);
+        $span->setAttribute('event.type', $eventType);
 
         try {
             $this->logger->info('Processing event', [
@@ -52,7 +51,7 @@ class ProcessEventHandler
 
             if (null === $project) {
                 $this->logger->error('Project not found', ['project_id' => $message->projectId]);
-                $span?->setStatus(StatusCode::STATUS_ERROR, 'Project not found');
+                $span->setStatus(StatusCode::STATUS_ERROR, 'Project not found');
 
                 return;
             }
@@ -68,13 +67,13 @@ class ProcessEventHandler
                 return $this->fingerprintService->generateFingerprint($eventData);
             });
             $eventData['fingerprint'] = $fingerprint;
-            $span?->setAttribute('fingerprint', $fingerprint);
+            $span->setAttribute('fingerprint', $fingerprint);
 
             // Find or create the issue
             $issue = $this->traceOperation('issue.find_or_create', function () use ($project, $eventData, $fingerprint) {
                 return $this->findOrCreateIssue($project, $eventData, $fingerprint);
             });
-            $span?->setAttribute('issue.id', $issue->getPublicId()?->toRfc4122());
+            $span->setAttribute('issue.id', $issue->getPublicId()?->toRfc4122());
 
             // Write event to Parquet
             try {
@@ -89,7 +88,7 @@ class ProcessEventHandler
                 // Don't rethrow - we still consider the event processed
             }
 
-            $span?->setStatus(StatusCode::STATUS_OK);
+            $span->setStatus(StatusCode::STATUS_OK);
 
             $this->logger->info('Event processed successfully', [
                 'event_id' => $eventData['event_id'],
@@ -97,12 +96,12 @@ class ProcessEventHandler
                 'fingerprint' => $fingerprint,
             ]);
         } catch (\Throwable $e) {
-            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
-            $span?->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span->recordException($e);
 
             throw $e;
         } finally {
-            $span?->end();
+            $span->end();
         }
     }
 
@@ -199,13 +198,9 @@ class ProcessEventHandler
         };
     }
 
-    private function startSpan(string $name): ?SpanInterface
+    private function startSpan(string $name): SpanInterface
     {
-        if (!$this->tracerFactory->isEnabled()) {
-            return null;
-        }
-
-        return $this->tracerFactory->createTracer('event-handler')
+        return Globals::tracerProvider()->getTracer('errata')
             ->spanBuilder($name)
             ->startSpan();
     }
@@ -221,11 +216,7 @@ class ProcessEventHandler
      */
     private function traceOperation(string $name, callable $callback): mixed
     {
-        if (!$this->tracerFactory->isEnabled()) {
-            return $callback();
-        }
-
-        $span = $this->tracerFactory->createTracer('event-handler')
+        $span = Globals::tracerProvider()->getTracer('errata')
             ->spanBuilder($name)
             ->startSpan();
 

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parquet;
 
-use App\Service\Telemetry\TracerFactory;
 use Flow\Parquet\Reader;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
@@ -21,7 +21,6 @@ class ParquetReaderService
         #[Autowire('%kernel.project_dir%/storage/parquet')]
         private readonly string $storagePath,
         private readonly LoggerInterface $logger,
-        private readonly TracerFactory $tracerFactory,
     ) {
     }
 
@@ -41,27 +40,27 @@ class ParquetReaderService
         array $filters = [],
     ): \Generator {
         $span = $this->startSpan('parquet.read_events');
-        $span?->setAttribute('organization.id', $organizationId ?? 'all');
-        $span?->setAttribute('project.id', $projectId ?? 'all');
-        $span?->setAttribute('event.type', $eventType ?? 'all');
-        $span?->setAttribute('filter.count', count($filters));
+        $span->setAttribute('organization.id', $organizationId ?? 'all');
+        $span->setAttribute('project.id', $projectId ?? 'all');
+        $span->setAttribute('event.type', $eventType ?? 'all');
+        $span->setAttribute('filter.count', count($filters));
 
         try {
             $files = $this->findParquetFiles($organizationId, $projectId, $eventType, $from, $to);
-            $span?->setAttribute('file.count', count($files));
+            $span->setAttribute('file.count', count($files));
 
             foreach ($files as $file) {
                 yield from $this->readFile($file, $filters);
             }
 
-            $span?->setStatus(StatusCode::STATUS_OK);
+            $span->setStatus(StatusCode::STATUS_OK);
         } catch (\Throwable $e) {
-            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
-            $span?->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span->recordException($e);
 
             throw $e;
         } finally {
-            $span?->end();
+            $span->end();
         }
     }
 
@@ -241,10 +240,10 @@ class ParquetReaderService
         ?\DateTimeInterface $to = null,
     ): array {
         $span = $this->startSpan('parquet.get_events_by_fingerprint');
-        $span?->setAttribute('fingerprint', $fingerprint);
-        $span?->setAttribute('organization.id', $organizationId ?? 'all');
-        $span?->setAttribute('project.id', $projectId ?? 'all');
-        $span?->setAttribute('limit', $limit);
+        $span->setAttribute('fingerprint', $fingerprint);
+        $span->setAttribute('organization.id', $organizationId ?? 'all');
+        $span->setAttribute('project.id', $projectId ?? 'all');
+        $span->setAttribute('limit', $limit);
 
         try {
             $events = [];
@@ -263,17 +262,17 @@ class ParquetReaderService
             // Sort by timestamp descending
             usort($events, fn ($a, $b) => ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0));
 
-            $span?->setAttribute('event.count', count($events));
-            $span?->setStatus(StatusCode::STATUS_OK);
+            $span->setAttribute('event.count', count($events));
+            $span->setStatus(StatusCode::STATUS_OK);
 
             return $events;
         } catch (\Throwable $e) {
-            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
-            $span?->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span->recordException($e);
 
             throw $e;
         } finally {
-            $span?->end();
+            $span->end();
         }
     }
 
@@ -553,13 +552,9 @@ class ParquetReaderService
         };
     }
 
-    private function startSpan(string $name): ?SpanInterface
+    private function startSpan(string $name): SpanInterface
     {
-        if (!$this->tracerFactory->isEnabled()) {
-            return null;
-        }
-
-        return $this->tracerFactory->createTracer('parquet')
+        return Globals::tracerProvider()->getTracer('errata')
             ->spanBuilder($name)
             ->startSpan();
     }

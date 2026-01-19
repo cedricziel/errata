@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Messenger\Middleware;
 
 use App\Messenger\Stamp\TraceContextStamp;
-use App\Service\Telemetry\TracerFactory;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Context\Context;
@@ -22,17 +22,8 @@ use Symfony\Component\Messenger\Stamp\ReceivedStamp;
  */
 final class TraceContextMiddleware implements MiddlewareInterface
 {
-    public function __construct(
-        private readonly TracerFactory $tracerFactory,
-    ) {
-    }
-
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
-        if (!$this->tracerFactory->isEnabled()) {
-            return $stack->next()->handle($envelope, $stack);
-        }
-
         // Check if this is a received message (from queue) or being sent
         $receivedStamp = $envelope->last(ReceivedStamp::class);
 
@@ -68,7 +59,7 @@ final class TraceContextMiddleware implements MiddlewareInterface
             ? $stamp->extractContext()
             : Context::getCurrent();
 
-        $tracer = $this->tracerFactory->createTracer('messenger');
+        $tracer = Globals::tracerProvider()->getTracer('errata');
         $messageClass = $envelope->getMessage()::class;
         $shortClassName = substr(strrchr($messageClass, '\\') ?: $messageClass, 1);
 

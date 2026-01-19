@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Integration\MessageHandler;
 
 use App\Service\Parquet\ParquetReaderService;
-use App\Service\Telemetry\TracerFactory;
 use App\Tests\Integration\AbstractIntegrationTestCase;
 
 /**
@@ -26,20 +25,9 @@ class ProcessEventHandlerPartitioningTest extends AbstractIntegrationTestCase
         // Inject our test storage path
         $container = static::getContainer();
 
-        $tracerFactory = new TracerFactory(
-            enabled: false,
-            serviceName: 'test',
-            serviceVersion: '1.0.0',
-            exporterEndpoint: 'console',
-            samplerType: 'always_off',
-            samplerArg: 0.0,
-            environment: 'test',
-        );
-
         $this->reader = new ParquetReaderService(
             $this->storagePath,
             $container->get('logger'),
-            $tracerFactory,
         );
     }
 

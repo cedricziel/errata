@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parquet;
 
-use App\Service\Telemetry\TracerFactory;
 use Flow\Parquet\Writer;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
@@ -26,7 +26,6 @@ class ParquetWriterService
         #[Autowire('%kernel.project_dir%/storage/parquet')]
         private readonly string $storagePath,
         private readonly LoggerInterface $logger,
-        private readonly TracerFactory $tracerFactory,
     ) {
     }
 
@@ -98,15 +97,15 @@ class ParquetWriterService
             $eventType = $firstEvent['event_type'] ?? 'unknown';
             $timestamp = $firstEvent['timestamp'] ?? (int) (microtime(true) * 1000);
 
-            $span?->setAttribute('organization.id', $organizationId);
-            $span?->setAttribute('project.id', $projectId);
-            $span?->setAttribute('event.type', $eventType);
-            $span?->setAttribute('event.count', count($events));
+            $span->setAttribute('organization.id', $organizationId);
+            $span->setAttribute('project.id', $projectId);
+            $span->setAttribute('event.type', $eventType);
+            $span->setAttribute('event.count', count($events));
 
             $filePath = $this->getFilePath($organizationId, $projectId, $eventType, $timestamp);
             $this->ensureDirectoryExists(dirname($filePath));
 
-            $span?->setAttribute('file.path', $filePath);
+            $span->setAttribute('file.path', $filePath);
 
             $writer = new Writer();
             $schema = WideEventSchema::getSchema();
@@ -120,7 +119,7 @@ class ParquetWriterService
 
             $writer->close();
 
-            $span?->setStatus(StatusCode::STATUS_OK);
+            $span->setStatus(StatusCode::STATUS_OK);
 
             $this->logger->info('Wrote events to Parquet file', [
                 'file' => $filePath,
@@ -129,12 +128,12 @@ class ParquetWriterService
 
             return $filePath;
         } catch (\Throwable $e) {
-            $span?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
-            $span?->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            $span->recordException($e);
 
             throw $e;
         } finally {
-            $span?->end();
+            $span->end();
         }
     }
 
@@ -237,13 +236,9 @@ class ParquetWriterService
         $this->buffer = [];
     }
 
-    private function startSpan(string $name): ?SpanInterface
+    private function startSpan(string $name): SpanInterface
     {
-        if (!$this->tracerFactory->isEnabled()) {
-            return null;
-        }
-
-        return $this->tracerFactory->createTracer('parquet')
+        return Globals::tracerProvider()->getTracer('errata')
             ->spanBuilder($name)
             ->startSpan();
     }
