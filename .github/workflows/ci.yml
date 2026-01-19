@@ -193,7 +193,7 @@ jobs:
         with:
           context: apps/server
           file: apps/server/Dockerfile
-          target: web
+          target: web-prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
