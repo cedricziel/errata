@@ -38,22 +38,10 @@ function getConfig() {
  * URLs to ignore to avoid recursive tracing of our own telemetry requests
  */
 const IGNORED_URLS = [
-    '/v1/traces',
-    '/v1/logs',
-    '/v1/metrics',
+    /\/v1\/traces/,
+    /\/v1\/logs/,
+    /\/v1\/metrics/,
 ];
-
-/**
- * Check if a URL should be ignored for tracing
- */
-function shouldIgnoreUrl(url) {
-    try {
-        const urlObj = new URL(url, window.location.origin);
-        return IGNORED_URLS.some(ignored => urlObj.pathname.startsWith(ignored));
-    } catch {
-        return false;
-    }
-}
 
 let tracerProvider = null;
 
