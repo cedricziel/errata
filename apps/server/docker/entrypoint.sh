@@ -10,8 +10,11 @@ if [ "$1" = "supervisord" ] && [ -n "$DATABASE_URL" ]; then
     php /app/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration || true
 fi
 
-echo "Warming cache..."
-php /app/bin/console cache:clear --env=prod --no-debug || true
-chown -R www-data:www-data /app/var/cache
+# Warm cache with runtime environment variables (if not already warmed)
+if [ ! -d /app/var/cache/prod ]; then
+    echo "Warming cache..."
+    php /app/bin/console cache:warmup --env=prod --no-debug || true
+    chown -R www-data:www-data /app/var/cache
+fi
 
 exec "$@"

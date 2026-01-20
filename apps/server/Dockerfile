@@ -61,14 +61,20 @@ FROM builder-base AS builder-prod
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
 
+# Install dependencies without scripts first (for layer caching)
 RUN --mount=type=cache,target=/root/.composer/cache \
-    composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+    composer install --no-dev --no-scripts --no-interaction --prefer-dist --no-autoloader
 
 COPY . .
-RUN composer run-script post-install-cmd --no-interaction || true
-RUN php bin/console importmap:install --no-interaction
-RUN php bin/console asset-map:compile --no-interaction
-RUN php bin/console cache:warmup
+
+# Optimize autoloader and compile env defaults
+# Runtime env vars from Dokku/Docker will override these compiled defaults
+RUN set -eux; \
+    composer dump-autoload --classmap-authoritative --no-dev; \
+    composer dump-env prod; \
+    composer run-script --no-dev post-install-cmd || true; \
+    php bin/console importmap:install --no-interaction; \
+    php bin/console asset-map:compile --no-interaction
 
 # =============================================================================
 # Stage 3a: Base runtime for development
