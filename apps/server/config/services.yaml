@@ -72,3 +72,8 @@ services:
     App\Service\QueryBuilder\AsyncQueryResultStore:
         arguments:
             $cache: '@async_query.cache'
+
+    # Parquet reader service with performance logger
+    App\Service\Parquet\ParquetReaderService:
+        arguments:
+            $logger: '@monolog.logger.performance'

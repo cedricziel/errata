@@ -1,6 +1,7 @@
 monolog:
     channels:
         - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
+        - performance # Performance logging channel for timing diagnostics
 
 when@dev:
     monolog:
@@ -61,4 +62,10 @@ when@prod:
                 type: stream
                 channels: [deprecation]
                 path: php://stderr
+                formatter: monolog.formatter.json
+            performance:
+                type: stream
+                channels: [performance]
+                path: php://stderr
+                level: info
                 formatter: monolog.formatter.json

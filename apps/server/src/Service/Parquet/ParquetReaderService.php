@@ -270,12 +270,21 @@ class ParquetReaderService
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
     ): array {
+        $startTime = microtime(true);
         $span = $this->startSpan('parquet.get_events_by_fingerprint');
         $span->setAttribute('fingerprint', $fingerprint);
         $span->setAttribute('organization.id', $organizationId ?? 'all');
         $span->setAttribute('project.id', $projectId ?? 'all');
         $span->setAttribute('limit', $limit);
         $span->setAttribute('storage.type', $this->storageFactory->getStorageType());
+        $span->setAttribute('from', $from?->format('Y-m-d H:i:s') ?? 'null');
+        $span->setAttribute('to', $to?->format('Y-m-d H:i:s') ?? 'null');
+
+        $this->logger->info('getEventsByFingerprint started', [
+            'fingerprint' => substr($fingerprint, 0, 16).'...',
+            'from' => $from?->format('Y-m-d'),
+            'to' => $to?->format('Y-m-d'),
+        ]);
 
         try {
             $events = [];
@@ -294,8 +303,16 @@ class ParquetReaderService
             // Sort by timestamp descending
             usort($events, fn ($a, $b) => ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0));
 
+            $duration = microtime(true) - $startTime;
             $span->setAttribute('event.count', count($events));
+            $span->setAttribute('duration_ms', (int) ($duration * 1000));
             $span->setStatus(StatusCode::STATUS_OK);
+
+            $this->logger->info('getEventsByFingerprint completed', [
+                'fingerprint' => substr($fingerprint, 0, 16).'...',
+                'event_count' => count($events),
+                'duration_ms' => (int) ($duration * 1000),
+            ]);
 
             return $events;
         } catch (\Throwable $e) {
@@ -321,13 +338,26 @@ class ParquetReaderService
         ?\DateTimeInterface $to = null,
         int $maxFiles = 50,
     ): array {
+        $startTime = microtime(true);
+
         // S3/memory storage uses fstab-based file discovery
         if ($this->storageFactory->requiresStreamOperations()) {
-            return $this->findStreamBasedParquetFiles($organizationId, $projectId, $eventType, $from, $to, $maxFiles);
+            $files = $this->findStreamBasedParquetFiles($organizationId, $projectId, $eventType, $from, $to, $maxFiles);
+        } else {
+            // Local storage uses Symfony Finder
+            $files = $this->findLocalParquetFiles($organizationId, $projectId, $eventType, $from, $to, $maxFiles);
         }
 
-        // Local storage uses Symfony Finder
-        return $this->findLocalParquetFiles($organizationId, $projectId, $eventType, $from, $to, $maxFiles);
+        $duration = microtime(true) - $startTime;
+        $this->logger->info('findParquetFiles completed', [
+            'file_count' => count($files),
+            'duration_ms' => (int) ($duration * 1000),
+            'from' => $from?->format('Y-m-d'),
+            'to' => $to?->format('Y-m-d'),
+            'storage_type' => $this->storageFactory->getStorageType(),
+        ]);
+
+        return $files;
     }
 
     /**
