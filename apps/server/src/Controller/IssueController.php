@@ -113,6 +113,7 @@ class IssueController extends AbstractController
         }
 
         // Get related events from Parquet
+        // Use issue's time bounds to constrain the search and avoid scanning all files
         $organizationId = $project->getOrganization()->getPublicId()?->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
         $events = $this->parquetReader->getEventsByFingerprint(
@@ -120,7 +121,9 @@ class IssueController extends AbstractController
             $organizationId,
             $projectId,
             null,
-            20
+            20,
+            $issue->getFirstSeenAt(),
+            $issue->getLastSeenAt(),
         );
 
         return $this->render('issue/show.html.twig', [
