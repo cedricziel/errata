@@ -319,14 +319,15 @@ class ParquetReaderService
         ?string $eventType = null,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
+        int $maxFiles = 50,
     ): array {
         // S3/memory storage uses fstab-based file discovery
         if ($this->storageFactory->requiresStreamOperations()) {
-            return $this->findStreamBasedParquetFiles($organizationId, $projectId, $eventType, $from, $to);
+            return $this->findStreamBasedParquetFiles($organizationId, $projectId, $eventType, $from, $to, $maxFiles);
         }
 
         // Local storage uses Symfony Finder
-        return $this->findLocalParquetFiles($organizationId, $projectId, $eventType, $from, $to);
+        return $this->findLocalParquetFiles($organizationId, $projectId, $eventType, $from, $to, $maxFiles);
     }
 
     /**
@@ -340,6 +341,7 @@ class ParquetReaderService
         ?string $eventType = null,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
+        int $maxFiles = 50,
     ): array {
         // Build the search path with partition pruning
         // For protocol-based paths (aws-s3://, memory://), keep as-is
@@ -406,7 +408,14 @@ class ParquetReaderService
                 $files[] = $filePath;
             }
 
+            // Sort by name (most recent files typically have later timestamps in filename)
             sort($files);
+
+            // Limit the number of files to prevent S3 read timeouts
+            // Take the last N files (most recent) after sorting
+            if (count($files) > $maxFiles) {
+                $files = array_slice($files, -$maxFiles);
+            }
 
             return $files;
         } catch (\Throwable $e) {
@@ -498,6 +507,7 @@ class ParquetReaderService
         ?string $eventType = null,
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
+        int $maxFiles = 50,
     ): array {
         // Build the base path with partition pruning
         $basePath = rtrim($this->basePath, '/');
@@ -561,6 +571,12 @@ class ParquetReaderService
         $files = [];
         foreach ($finder as $file) {
             $files[] = $file->getPathname();
+        }
+
+        // Limit the number of files to prevent read timeouts
+        // Take the last N files (most recent) after sorting
+        if (count($files) > $maxFiles) {
+            $files = array_slice($files, -$maxFiles);
         }
 
         return $files;
