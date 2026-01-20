@@ -67,3 +67,8 @@ services:
             $s3AccessKey: '%storage.s3.access_key%'
             $s3SecretKey: '%storage.s3.secret_key%'
             $s3UsePathStyle: '%storage.s3.use_path_style%'
+
+    # Async query result store with dedicated cache pool
+    App\Service\QueryBuilder\AsyncQueryResultStore:
+        arguments:
+            $cache: '@async_query.cache'

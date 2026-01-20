@@ -1,18 +1,26 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['form', 'filterContainer', 'projectSelect', 'projectInput', 'groupBy', 'facetPanel', 'results'];
+    static targets = ['form', 'filterContainer', 'projectSelect', 'projectInput', 'groupBy', 'facetPanel', 'results', 'loadingOverlay', 'progressBar', 'cancelButton', 'errorMessage'];
     static values = {
         resultsUrl: String,
-        facetsUrl: String
+        facetsUrl: String,
+        submitUrl: String,
+        asyncEnabled: { type: Boolean, default: false }
     };
 
     filterCount = 0;
+    currentQueryId = null;
+    eventSource = null;
 
     connect() {
         // Initialize filter count based on existing filters
         const filterRows = this.filterContainerTarget.querySelectorAll('.filter-row:not(.new-filter-row)');
         this.filterCount = filterRows.length;
+    }
+
+    disconnect() {
+        this.closeEventSource();
     }
 
     // Submit the query form
@@ -24,6 +32,12 @@ export default class extends Controller {
         // Sync project select value to hidden input
         if (this.hasProjectSelectTarget && this.hasProjectInputTarget) {
             this.projectInputTarget.value = this.projectSelectTarget.value;
+        }
+
+        // Use async submission if enabled
+        if (this.asyncEnabledValue && this.hasSubmitUrlValue) {
+            this.submitQueryAsync();
+            return;
         }
 
         // Build URL with current form data
@@ -38,6 +52,281 @@ export default class extends Controller {
 
         // Navigate to the new URL
         window.location.href = '?' + params.toString();
+    }
+
+    // Submit query asynchronously
+    async submitQueryAsync() {
+        // Show loading state
+        this.showLoading();
+
+        try {
+            // Close any existing SSE connection
+            this.closeEventSource();
+
+            // Build the query data
+            const queryData = this.buildQueryData();
+
+            // Submit the query
+            const response = await fetch(this.submitUrlValue, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(queryData),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.currentQueryId = data.queryId;
+
+            // Subscribe to SSE stream
+            this.subscribeToResults(data.streamUrl);
+
+            // Store cancel URL for later
+            this.cancelUrl = data.cancelUrl;
+
+        } catch (error) {
+            console.error('Query submission failed:', error);
+            this.showError('Failed to submit query: ' + error.message);
+            this.hideLoading();
+        }
+    }
+
+    // Build query data from form
+    buildQueryData() {
+        const formData = new FormData(this.formTarget);
+        const filters = [];
+
+        // Collect filters
+        const filterRows = this.filterContainerTarget.querySelectorAll('.filter-row:not(.new-filter-row)');
+        filterRows.forEach((row, index) => {
+            const attribute = row.querySelector(`[name="filters[${index}][attribute]"]`)?.value;
+            const operator = row.querySelector(`[name="filters[${index}][operator]"]`)?.value;
+            const value = row.querySelector(`[name="filters[${index}][value]"]`)?.value;
+
+            if (attribute && operator) {
+                filters.push({ attribute, operator, value });
+            }
+        });
+
+        return {
+            filters,
+            groupBy: formData.get('groupBy') || null,
+            page: parseInt(formData.get('page') || '1', 10),
+            limit: parseInt(formData.get('limit') || '50', 10),
+            project: formData.get('project'),
+        };
+    }
+
+    // Subscribe to SSE results stream
+    subscribeToResults(streamUrl) {
+        this.eventSource = new EventSource(streamUrl);
+
+        this.eventSource.addEventListener('status', (event) => {
+            const data = JSON.parse(event.data);
+            this.handleStatusUpdate(data);
+        });
+
+        this.eventSource.addEventListener('progress', (event) => {
+            const data = JSON.parse(event.data);
+            this.updateProgress(data.progress);
+        });
+
+        this.eventSource.addEventListener('result', (event) => {
+            const data = JSON.parse(event.data);
+            this.handleResult(data);
+            this.closeEventSource();
+        });
+
+        this.eventSource.addEventListener('error', (event) => {
+            if (event.data) {
+                const data = JSON.parse(event.data);
+                this.showError(data.message || 'Query failed');
+            } else {
+                this.showError('Connection lost');
+            }
+            this.closeEventSource();
+            this.hideLoading();
+        });
+
+        this.eventSource.addEventListener('cancelled', (event) => {
+            const data = JSON.parse(event.data);
+            this.showCancelled(data.message || 'Query was cancelled');
+            this.closeEventSource();
+            this.hideLoading();
+        });
+
+        this.eventSource.addEventListener('heartbeat', (event) => {
+            // Keep connection alive indicator
+            console.debug('Query heartbeat received');
+        });
+
+        this.eventSource.onerror = (error) => {
+            console.error('SSE connection error:', error);
+            if (this.eventSource.readyState === EventSource.CLOSED) {
+                this.closeEventSource();
+                this.hideLoading();
+            }
+        };
+    }
+
+    // Handle status update
+    handleStatusUpdate(data) {
+        console.debug('Query status:', data.status, 'progress:', data.progress);
+        this.updateProgress(data.progress);
+    }
+
+    // Update progress bar
+    updateProgress(progress) {
+        if (this.hasProgressBarTarget) {
+            this.progressBarTarget.style.width = `${progress}%`;
+            this.progressBarTarget.setAttribute('aria-valuenow', progress);
+        }
+    }
+
+    // Handle query result
+    handleResult(data) {
+        this.hideLoading();
+        this.renderResults(data);
+    }
+
+    // Render results in the results target
+    renderResults(data) {
+        if (!this.hasResultsTarget) {
+            console.warn('No results target found');
+            return;
+        }
+
+        // Dispatch custom event with results for other controllers to handle
+        this.element.dispatchEvent(new CustomEvent('query:results', {
+            detail: data,
+            bubbles: true,
+        }));
+
+        // Build a simple results display if template not provided
+        const events = data.events || [];
+        const total = data.total || 0;
+
+        let html = `<div class="query-results">`;
+        html += `<div class="results-summary text-sm text-gray-500 mb-4">Found ${total} events</div>`;
+
+        if (events.length === 0) {
+            html += `<div class="no-results text-gray-500 text-center py-8">No events found matching your query.</div>`;
+        } else {
+            html += `<div class="results-table overflow-x-auto">`;
+            html += `<table class="min-w-full divide-y divide-gray-200">`;
+            html += `<thead class="bg-gray-50"><tr>`;
+
+            // Get columns from first event
+            const columns = Object.keys(events[0]).slice(0, 8); // Limit columns for display
+            columns.forEach(col => {
+                html += `<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${col}</th>`;
+            });
+            html += `</tr></thead>`;
+
+            html += `<tbody class="bg-white divide-y divide-gray-200">`;
+            events.forEach(event => {
+                html += `<tr class="hover:bg-gray-50">`;
+                columns.forEach(col => {
+                    const value = event[col];
+                    const displayValue = typeof value === 'object' ? JSON.stringify(value) : (value ?? '');
+                    html += `<td class="px-4 py-2 text-sm text-gray-900 truncate max-w-xs" title="${displayValue}">${displayValue}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table>`;
+            html += `</div>`;
+        }
+
+        html += `</div>`;
+
+        this.resultsTarget.innerHTML = html;
+    }
+
+    // Cancel the running query
+    async cancelQuery(event) {
+        if (event) {
+            event.preventDefault();
+        }
+
+        if (!this.cancelUrl || !this.currentQueryId) {
+            return;
+        }
+
+        try {
+            const response = await fetch(this.cancelUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                console.debug('Query cancellation requested');
+            } else {
+                console.warn('Could not cancel query:', data.error);
+            }
+        } catch (error) {
+            console.error('Failed to cancel query:', error);
+        }
+    }
+
+    // Show loading overlay
+    showLoading() {
+        if (this.hasLoadingOverlayTarget) {
+            this.loadingOverlayTarget.classList.remove('hidden');
+        }
+        if (this.hasProgressBarTarget) {
+            this.progressBarTarget.style.width = '0%';
+        }
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.classList.remove('hidden');
+        }
+        if (this.hasErrorMessageTarget) {
+            this.errorMessageTarget.classList.add('hidden');
+        }
+    }
+
+    // Hide loading overlay
+    hideLoading() {
+        if (this.hasLoadingOverlayTarget) {
+            this.loadingOverlayTarget.classList.add('hidden');
+        }
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.classList.add('hidden');
+        }
+    }
+
+    // Show error message
+    showError(message) {
+        if (this.hasErrorMessageTarget) {
+            this.errorMessageTarget.textContent = message;
+            this.errorMessageTarget.classList.remove('hidden');
+        } else {
+            console.error('Query error:', message);
+        }
+    }
+
+    // Show cancelled message
+    showCancelled(message) {
+        if (this.hasErrorMessageTarget) {
+            this.errorMessageTarget.textContent = message;
+            this.errorMessageTarget.classList.remove('hidden');
+        }
+    }
+
+    // Close EventSource connection
+    closeEventSource() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+        }
+        this.currentQueryId = null;
+        this.cancelUrl = null;
     }
 
     // Add a new filter row

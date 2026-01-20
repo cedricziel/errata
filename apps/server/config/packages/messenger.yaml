@@ -27,6 +27,9 @@ framework:
             # Route event processing to async (or sync in dev)
             App\Message\ProcessEvent: async
 
+            # Route query execution to async
+            App\Message\ExecuteQuery: async
+
 when@test:
     framework:
         messenger:

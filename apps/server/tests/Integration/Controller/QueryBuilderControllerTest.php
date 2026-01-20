@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Controller;
 
+use App\Message\ExecuteQuery;
 use App\Tests\Integration\AbstractIntegrationTestCase;
+use Zenstruck\Messenger\Test\InteractsWithMessenger;
 
 class QueryBuilderControllerTest extends AbstractIntegrationTestCase
 {
+    use InteractsWithMessenger;
     public function testQueryPageRequiresAuthentication(): void
     {
         $this->browser()
@@ -176,4 +179,264 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             ->assertSuccessful()
             ->assertSeeIn('nav', 'Query');
     }
+
+    public function testQuerySubmitEndpointReturnsQueryIdAndUrls(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'groupBy' => null,
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful()
+            ->assertJson()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('queryId', $response);
+                $this->assertArrayHasKey('streamUrl', $response);
+                $this->assertArrayHasKey('cancelUrl', $response);
+                $this->assertArrayHasKey('statusUrl', $response);
+                $this->assertStringContainsString('/query/stream/', $response['streamUrl']);
+                $this->assertStringContainsString('/query/cancel/', $response['cancelUrl']);
+                $this->assertStringContainsString('/query/status/', $response['statusUrl']);
+            });
+    }
+
+    public function testQuerySubmitRequiresAuthentication(): void
+    {
+        $this->browser()
+            ->interceptRedirects()
+            ->post('/query/submit', [
+                'json' => ['filters' => []],
+            ])
+            ->assertRedirectedTo('/login');
+    }
+
+    public function testQueryStatusEndpointReturnsStatus(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // First submit a query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful()
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // Then check its status
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/query/status/'.$queryId)
+            ->assertSuccessful()
+            ->assertJson()
+            ->use(function ($browser) use ($queryId) {
+                $response = $browser->json()->decoded();
+                $this->assertSame($queryId, $response['queryId']);
+                $this->assertArrayHasKey('status', $response);
+            });
+    }
+
+    public function testQueryStatusEndpointReturnsNotFoundForInvalidQueryId(): void
+    {
+        $user = $this->createTestUser();
+
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/query/status/nonexistent-query-id')
+            ->assertStatus(404);
+    }
+
+    public function testQueryCancelEndpointRequiresAuthentication(): void
+    {
+        $this->browser()
+            ->interceptRedirects()
+            ->post('/query/cancel/some-query-id')
+            ->assertRedirectedTo('/login');
+    }
+
+    public function testQueryCancelEndpointReturnsNotFoundForInvalidQueryId(): void
+    {
+        $user = $this->createTestUser();
+
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/cancel/nonexistent-query-id')
+            ->assertStatus(404);
+    }
+
+    public function testQueryStreamEndpointRequiresAuthentication(): void
+    {
+        $this->browser()
+            ->interceptRedirects()
+            ->visit('/query/stream/some-query-id')
+            ->assertRedirectedTo('/login');
+    }
+
+    public function testQueryCancelEndpointSucceedsForPendingQuery(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // First submit a query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful()
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // Then cancel it
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/cancel/'.$queryId)
+            ->assertSuccessful()
+            ->assertJson()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertTrue($response['success']);
+                $this->assertSame('Cancellation requested', $response['message']);
+            });
+    }
+
+    public function testFullAsyncQueryFlow(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // 1. Submit a query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful()
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // 2. Verify message was queued
+        $this->transport('async')
+            ->queue()
+            ->assertContains(ExecuteQuery::class, 1);
+
+        // 3. Check initial status (should be pending)
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/query/status/'.$queryId)
+            ->assertSuccessful()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertSame('pending', $response['status']);
+            });
+
+        // 4. Process the queued message
+        $this->transport('async')->process();
+
+        // 5. Check status after processing (should be completed)
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/query/status/'.$queryId)
+            ->assertSuccessful()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertSame('completed', $response['status']);
+                $this->assertTrue($response['hasResult']);
+            });
+    }
+
+    public function testSubmitVerifiesQueryInitializedInCache(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // Submit a query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful()
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // Verify the query was initialized in the cache
+        /** @var \App\Service\QueryBuilder\AsyncQueryResultStore $resultStore */
+        $resultStore = static::getContainer()->get(\App\Service\QueryBuilder\AsyncQueryResultStore::class);
+        $state = $resultStore->getQueryState($queryId);
+
+        $this->assertNotNull($state);
+        $this->assertSame('pending', $state['status']);
+        $this->assertArrayHasKey('queryRequest', $state);
+    }
+
+    public function testQueryWithFiltersSubmitsSuccessfully(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [
+                        ['attribute' => 'event_type', 'operator' => 'eq', 'value' => 'error'],
+                        ['attribute' => 'severity', 'operator' => 'eq', 'value' => 'error'],
+                    ],
+                    'groupBy' => 'event_type',
+                    'page' => 1,
+                    'limit' => 25,
+                ],
+            ])
+            ->assertSuccessful()
+            ->assertJson()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertArrayHasKey('queryId', $response);
+            });
+    }
+
 }
