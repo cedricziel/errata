@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import * as Turbo from '@hotwired/turbo';
 
 /**
  * Stimulus controller for the timeframe picker dropdown.
@@ -28,6 +29,35 @@ export default class extends Controller {
     hideCustomForm() {
         if (this.hasCustomFormTarget) {
             this.customFormTarget.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Handle form submission via fetch to work properly with Turbo Drive.
+     *
+     * Intercepts the form POST, submits via fetch, then triggers a Turbo visit
+     * to refresh the page with the new timeframe selection.
+     */
+    async handleSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'Accept': 'text/html'
+                }
+            });
+
+            if (response.ok || response.redirected) {
+                // Close menu and refresh page via Turbo
+                this.menuTarget.classList.add('hidden');
+                Turbo.visit(window.location.href, { action: 'replace' });
+            }
+        } catch (error) {
+            console.error('Timeframe update failed:', error);
         }
     }
 

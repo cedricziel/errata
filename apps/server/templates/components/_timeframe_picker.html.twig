@@ -26,7 +26,8 @@
             </div>
 
             {% for preset_key, preset_label in timeframe_presets %}
-                <form action="{{ path('timeframe_set') }}" method="POST" class="block">
+                <form action="{{ path('timeframe_set') }}" method="POST" class="block"
+                      data-action="submit->timeframe-picker#handleSubmit">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token('timeframe') }}">
                     <input type="hidden" name="preset" value="{{ preset_key }}">
                     <button type="submit"
@@ -50,7 +51,8 @@
                     Custom Range
                 </div>
 
-                <form action="{{ path('timeframe_set') }}" method="POST" class="space-y-3">
+                <form action="{{ path('timeframe_set') }}" method="POST" class="space-y-3"
+                      data-action="submit->timeframe-picker#handleSubmit">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token('timeframe') }}">
                     <input type="hidden" name="preset" value="custom">
 
