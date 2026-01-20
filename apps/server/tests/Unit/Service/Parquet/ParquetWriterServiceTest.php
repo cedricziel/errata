@@ -149,6 +149,46 @@ class ParquetWriterServiceTest extends TestCase
         $this->assertStringContainsString('event_type=unknown', $filePath);
     }
 
+    public function testGetFilePathPreservesProtocolSlashes(): void
+    {
+        // Test with memory storage to verify protocol-based paths work correctly
+        $memoryStorageFactory = new StorageFactory(
+            storageType: 'memory',
+            localPath: '/unused',
+        );
+
+        $memoryWriter = new ParquetWriterService(
+            $memoryStorageFactory,
+            new NullLogger(),
+        );
+
+        $timestamp = strtotime('2026-01-17 14:30:00') * 1000;
+        $path = $memoryWriter->getFilePath('org-123', 'proj-456', 'span', $timestamp);
+
+        // Path should start with memory:// protocol, not memory:
+        $this->assertStringStartsWith('memory://', $path);
+        $this->assertStringContainsString('memory://organization_id=org-123', $path);
+    }
+
+    public function testGetProjectStoragePathPreservesProtocolSlashes(): void
+    {
+        $memoryStorageFactory = new StorageFactory(
+            storageType: 'memory',
+            localPath: '/unused',
+        );
+
+        $memoryWriter = new ParquetWriterService(
+            $memoryStorageFactory,
+            new NullLogger(),
+        );
+
+        $path = $memoryWriter->getProjectStoragePath('org-123', 'proj-456');
+
+        // Path should start with memory:// protocol
+        $this->assertStringStartsWith('memory://', $path);
+        $this->assertStringContainsString('memory://organization_id=org-123', $path);
+    }
+
     private function removeDirectory(string $path): void
     {
         if (!is_dir($path)) {
