@@ -23,6 +23,10 @@ class TimeframeController extends AbstractController
     #[Route('/set', name: 'set', methods: ['POST'])]
     public function set(Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('timeframe', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $preset = $request->request->get('preset');
         $customFrom = $request->request->get('custom_from');
         $customTo = $request->request->get('custom_to');

@@ -18,7 +18,11 @@ use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\SessionFactoryInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Zenstruck\Browser\Test\HasBrowser;
 
 abstract class AbstractIntegrationTestCase extends WebTestCase
@@ -222,5 +226,74 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
             'os_version' => '17.0',
             'device_model' => 'iPhone 15',
         ], $overrides);
+    }
+
+    /**
+     * Get a valid CSRF token for testing.
+     *
+     * Creates a session context if one doesn't exist, since CSRF tokens
+     * require an active session.
+     */
+    protected function getCsrfToken(string $tokenId): string
+    {
+        $container = static::getContainer();
+
+        /** @var SessionFactoryInterface $sessionFactory */
+        $sessionFactory = $container->get('session.factory');
+        $session = $sessionFactory->createSession();
+
+        $request = new Request();
+        $request->setSession($session);
+
+        /** @var RequestStack $requestStack */
+        $requestStack = $container->get(RequestStack::class);
+        $requestStack->push($request);
+
+        try {
+            /** @var CsrfTokenManagerInterface $csrfTokenManager */
+            $csrfTokenManager = $container->get('security.csrf.token_manager');
+
+            return $csrfTokenManager->getToken($tokenId)->getValue();
+        } finally {
+            $requestStack->pop();
+        }
+    }
+
+    /**
+     * Get a CSRF token using the browser's established session.
+     *
+     * The browser must have made at least one request before calling this method
+     * to establish its session.
+     *
+     * @param \Zenstruck\Browser\KernelBrowser $browser The browser instance after making a request
+     */
+    protected function getCsrfTokenFromBrowser($browser, string $tokenId): string
+    {
+        $container = static::getContainer();
+
+        // Get the session from the browser's last request
+        $session = $browser->client()->getRequest()->getSession();
+
+        // Push a request with this session onto the stack for the token manager
+        $request = new Request();
+        $request->setSession($session);
+
+        /** @var RequestStack $requestStack */
+        $requestStack = $container->get(RequestStack::class);
+        $requestStack->push($request);
+
+        try {
+            /** @var CsrfTokenManagerInterface $csrfTokenManager */
+            $csrfTokenManager = $container->get('security.csrf.token_manager');
+
+            $token = $csrfTokenManager->getToken($tokenId)->getValue();
+
+            // Save the session so the token is persisted for subsequent requests
+            $session->save();
+
+            return $token;
+        } finally {
+            $requestStack->pop();
+        }
     }
 }

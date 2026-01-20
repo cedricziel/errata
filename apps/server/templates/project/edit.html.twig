@@ -35,6 +35,7 @@
         </div>
 
         <form method="post" class="px-4 py-5 sm:p-6 space-y-6">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('project') }}">
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700">Project Name *</label>
                 <div class="mt-1">

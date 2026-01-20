@@ -27,6 +27,7 @@
 
             {% for preset_key, preset_label in timeframe_presets %}
                 <form action="{{ path('timeframe_set') }}" method="POST" class="block">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('timeframe') }}">
                     <input type="hidden" name="preset" value="{{ preset_key }}">
                     <button type="submit"
                             class="flex w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
@@ -50,6 +51,7 @@
                 </div>
 
                 <form action="{{ path('timeframe_set') }}" method="POST" class="space-y-3">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('timeframe') }}">
                     <input type="hidden" name="preset" value="custom">
 
                     <div>

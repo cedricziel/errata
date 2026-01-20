@@ -56,6 +56,7 @@
                 {# Status Actions #}
                 <div class="flex items-center space-x-2">
                     <form method="post" action="{{ path('issue_update_status', { publicId: issue.publicId }) }}" class="inline">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('issue') }}">
                         {% if issue.status == 'open' %}
                             <button type="submit" name="status" value="resolved"
                                     class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">

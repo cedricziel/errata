@@ -52,6 +52,7 @@
                                 {% for org in user_organizations %}
                                     {% if org.id != current_organization.id %}
                                         <form action="{{ path('organization_switch', { publicId: org.publicId }) }}" method="POST">
+                                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('organization_switch') }}">
                                             <button type="submit" class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
                                                 {{ org.name }}
                                             </button>

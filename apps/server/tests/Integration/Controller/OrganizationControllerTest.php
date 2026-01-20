@@ -80,10 +80,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $membership->setRole(OrganizationMembership::ROLE_MEMBER);
         $this->organizationMembershipRepository->save($membership, true);
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_switch');
+
+        $browser
             ->interceptRedirects()
-            ->post('/organizations/switch/'.$org2->getPublicId()->toRfc4122())
+            ->post('/organizations/switch/'.$org2->getPublicId()->toRfc4122(), [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/');
     }
 
@@ -92,10 +102,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $otherOrg = $this->createTestOrganization('Other Organization');
 
-        // User is NOT a member of otherOrg
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
-            ->post('/organizations/switch/'.$otherOrg->getPublicId()->toRfc4122())
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_switch');
+
+        // User is NOT a member of otherOrg
+        $browser
+            ->post('/organizations/switch/'.$otherOrg->getPublicId()->toRfc4122(), [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertStatus(403);
     }
 
@@ -103,9 +123,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
-            ->post('/organizations/switch/00000000-0000-0000-0000-000000000000')
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_switch');
+
+        $browser
+            ->post('/organizations/switch/00000000-0000-0000-0000-000000000000', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertStatus(404);
     }
 
@@ -224,12 +254,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $orgId = $org->getId();
         $publicId = $org->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit settings page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/organizations/'.$publicId.'/settings');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_settings');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/settings', [
                 'body' => [
                     'name' => 'Updated Organization Name',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId);
@@ -247,12 +284,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $originalName = $org->getName();
         $publicId = $org->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit settings page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/organizations/'.$publicId.'/settings');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_settings');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/settings', [
                 'body' => [
                     'name' => '',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings');
@@ -330,13 +374,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $org = $owner->getDefaultOrganization();
         $publicId = $org->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/invite', [
                 'body' => [
                     'email' => 'newuser@example.com',
                     'role' => 'member',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -354,13 +405,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $org = $owner->getDefaultOrganization();
         $publicId = $org->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/invite', [
                 'body' => [
                     'email' => 'newuser@example.com',
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -386,14 +444,21 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $membership->setRole(OrganizationMembership::ROLE_ADMIN);
         $this->organizationMembershipRepository->save($membership, true);
 
-        // Admin tries to invite as admin - should be rejected
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($admin)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        // Admin tries to invite as admin - should be rejected
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/invite', [
                 'body' => [
                     'email' => 'newuser@example.com',
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -409,13 +474,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $org = $owner->getDefaultOrganization();
         $publicId = $org->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/invite', [
                 'body' => [
                     'email' => 'nonexistent@example.com',
                     'role' => 'member',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -439,14 +511,21 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $membership->setRole(OrganizationMembership::ROLE_MEMBER);
         $this->organizationMembershipRepository->save($membership, true);
 
-        // Try to invite again
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        // Try to invite again
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/invite', [
                 'body' => [
                     'email' => 'existing@example.com',
                     'role' => 'member',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -470,12 +549,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $membership->setRole(OrganizationMembership::ROLE_MEMBER);
         $this->organizationMembershipRepository->save($membership, true);
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($member)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->post('/organizations/'.$publicId.'/members/invite', [
                 'body' => [
                     'email' => 'newuser@example.com',
                     'role' => 'member',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertStatus(403);
@@ -500,12 +586,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($membership, true);
         $membershipId = $membership->getId();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/role', [
                 'body' => [
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -537,12 +630,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($memberMembership, true);
         $memberMembershipId = $memberMembership->getId();
 
-        // Admin tries to change role
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($admin)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        // Admin tries to change role
+        $browser
             ->post('/organizations/'.$publicId.'/members/'.$memberMembershipId.'/role', [
                 'body' => [
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertStatus(403);
@@ -562,12 +662,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $ownerMembership = $owner->getMembershipFor($org);
         $membershipId = $ownerMembership->getId();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/role', [
                 'body' => [
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -593,12 +700,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($owner2Membership, true);
         $owner2MembershipId = $owner2Membership->getId();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner1)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
             ->post('/organizations/'.$publicId.'/members/'.$owner2MembershipId.'/role', [
                 'body' => [
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
@@ -627,10 +741,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($membership, true);
         $membershipId = $membership->getId();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Verify membership removed
@@ -660,10 +784,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($memberMembership, true);
         $memberMembershipId = $memberMembership->getId();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($admin)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$memberMembershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$memberMembershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Verify membership removed
@@ -693,11 +827,21 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($admin2Membership, true);
         $admin2MembershipId = $admin2Membership->getId();
 
-        // Admin1 tries to remove Admin2
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($admin1)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        // Admin1 tries to remove Admin2
+        $browser
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$admin2MembershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$admin2MembershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Verify membership still exists
@@ -714,10 +858,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $ownerMembership = $owner->getMembershipFor($org);
         $membershipId = $ownerMembership->getId();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Verify membership still exists
@@ -743,12 +897,22 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $ownerMembership = $owner->getMembershipFor($org);
         $membershipId = $ownerMembership->getId();
 
+        // Visit members page to establish session
+        $browser = $this->browser()
+            ->actingAs($admin)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
         // Admin (now also owner) tries to remove the original owner
         // But this is allowed since there are 2 owners
-        $this->browser()
-            ->actingAs($admin)
+        $browser
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Verify membership was removed (since there were 2 owners)
@@ -777,11 +941,21 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($owner2Membership, true);
         $owner2MembershipId = $owner2Membership->getId();
 
-        // Owner1 removes owner2, leaving owner1 as the only owner
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($owner1)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        // Owner1 removes owner2, leaving owner1 as the only owner
+        $browser
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$owner2MembershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$owner2MembershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Clear entity manager and re-fetch fresh entities after browser request
@@ -811,11 +985,21 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $owner3Membership->setRole(OrganizationMembership::ROLE_OWNER);
         $this->organizationMembershipRepository->save($owner3Membership, true);
 
-        // Now owner3 tries to remove owner1 - this should SUCCEED because there are 2 owners
-        $this->browser()
+        // Visit members page to establish session
+        $browser2 = $this->browser()
             ->actingAs($owner3)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token2 = $this->getCsrfTokenFromBrowser($browser2, 'organization_member');
+
+        // Now owner3 tries to remove owner1 - this should SUCCEED because there are 2 owners
+        $browser2
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$owner1MembershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$owner1MembershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token2,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Verify owner1's membership was removed (there were 2 owners, so it's allowed)
@@ -829,10 +1013,20 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $owner3Membership = $this->organizationMembershipRepository->findOneByUserAndOrganization($owner3, $org);
         $owner3MembershipId = $owner3Membership->getId();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser3 = $this->browser()
             ->actingAs($owner3)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token3 = $this->getCsrfTokenFromBrowser($browser3, 'organization_member');
+
+        $browser3
             ->interceptRedirects()
-            ->post('/organizations/'.$publicId.'/members/'.$owner3MembershipId.'/remove')
+            ->post('/organizations/'.$publicId.'/members/'.$owner3MembershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token3,
+                ],
+            ])
             ->assertRedirectedTo('/organizations/'.$publicId.'/settings/members');
 
         // Verify owner3's membership still exists (can't remove self)
@@ -862,9 +1056,53 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $this->organizationMembershipRepository->save($member2Membership, true);
         $member2MembershipId = $member2Membership->getId();
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($member1)
-            ->post('/organizations/'.$publicId.'/members/'.$member2MembershipId.'/remove')
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
+            ->post('/organizations/'.$publicId.'/members/'.$member2MembershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
+            ->assertStatus(403);
+    }
+
+    public function testRemoveMemberRequiresOwnerOrAdmin(): void
+    {
+        $owner = $this->createTestUser('owner@example.com');
+        $member = $this->createTestUser('member@example.com');
+        $org = $owner->getDefaultOrganization();
+        $publicId = $org->getPublicId()->toRfc4122();
+
+        // Add member to owner's org
+        $membership = new OrganizationMembership();
+        $membership->setUser($member);
+        $membership->setOrganization($org);
+        $membership->setRole(OrganizationMembership::ROLE_MEMBER);
+        $this->organizationMembershipRepository->save($membership, true);
+
+        $ownerMembership = $owner->getMembershipFor($org);
+        $membershipId = $ownerMembership->getId();
+
+        // Visit home to establish session
+        $browser = $this->browser()
+            ->actingAs($member)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        // Member tries to remove owner
+        $browser
+            ->post('/organizations/'.$publicId.'/members/'.$membershipId.'/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertStatus(403);
     }
 
@@ -888,11 +1126,18 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $org = $user->getDefaultOrganization();
         $publicId = $org->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
             ->post('/organizations/'.$publicId.'/members/99999/role', [
                 'body' => [
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertStatus(404);
@@ -904,9 +1149,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $org = $user->getDefaultOrganization();
         $publicId = $org->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
-            ->post('/organizations/'.$publicId.'/members/99999/remove')
+            ->visit('/organizations/'.$publicId.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        $browser
+            ->post('/organizations/'.$publicId.'/members/99999/remove', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertStatus(404);
     }
 
@@ -922,12 +1177,19 @@ class OrganizationControllerTest extends AbstractIntegrationTestCase
         $user2Membership = $user2->getMembershipFor($org2);
         $membershipId = $user2Membership->getId();
 
-        // User1 tries to change role of user2's membership in org1 (but membership is in org2)
-        $this->browser()
+        // Visit members page to establish session
+        $browser = $this->browser()
             ->actingAs($user1)
+            ->visit('/organizations/'.$publicId1.'/settings/members');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'organization_member');
+
+        // User1 tries to change role of user2's membership in org1 (but membership is in org2)
+        $browser
             ->post('/organizations/'.$publicId1.'/members/'.$membershipId.'/role', [
                 'body' => [
                     'role' => 'admin',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertStatus(404);

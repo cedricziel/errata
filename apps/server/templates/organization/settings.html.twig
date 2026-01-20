@@ -28,6 +28,7 @@
     {# Settings Form #}
     <div class="bg-white shadow rounded-lg">
         <form action="{{ path('organization_settings', { publicId: organization.publicId }) }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('organization_settings') }}">
             <div class="px-4 py-5 sm:p-6">
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     <div class="sm:col-span-4">

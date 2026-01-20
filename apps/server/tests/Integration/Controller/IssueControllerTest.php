@@ -105,11 +105,20 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $issueId = $issue->getId();
         $publicId = $issue->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit issue detail page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/issues/'.$publicId);
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'issue');
+
+        $browser
             ->interceptRedirects()
             ->post('/issues/'.$publicId.'/status', [
-                'body' => ['status' => Issue::STATUS_RESOLVED],
+                'body' => [
+                    'status' => Issue::STATUS_RESOLVED,
+                    '_csrf_token' => $token,
+                ],
             ])
             ->assertRedirectedTo('/issues/'.$publicId);
 
@@ -126,11 +135,20 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $issueId = $issue->getId();
         $publicId = $issue->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit issue detail page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/issues/'.$publicId);
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'issue');
+
+        $browser
             ->interceptRedirects()
             ->post('/issues/'.$publicId.'/status', [
-                'body' => ['status' => Issue::STATUS_IGNORED],
+                'body' => [
+                    'status' => Issue::STATUS_IGNORED,
+                    '_csrf_token' => $token,
+                ],
             ])
             ->assertRedirectedTo('/issues/'.$publicId);
 
@@ -149,11 +167,20 @@ class IssueControllerTest extends AbstractIntegrationTestCase
         $issueId = $issue->getId();
         $publicId = $issue->getPublicId()->toRfc4122();
 
-        // Login as user2 (different organization) - should not find the issue
-        $this->browser()
+        // Login as user2 (different organization) - visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user2)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'issue');
+
+        // Should not find the issue since it belongs to different organization
+        $browser
             ->post('/issues/'.$publicId.'/status', [
-                'body' => ['status' => Issue::STATUS_RESOLVED],
+                'body' => [
+                    'status' => Issue::STATUS_RESOLVED,
+                    '_csrf_token' => $token,
+                ],
             ])
             ->assertStatus(404);
 

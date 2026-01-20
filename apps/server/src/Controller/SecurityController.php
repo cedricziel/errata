@@ -48,6 +48,10 @@ class SecurityController extends AbstractController
         }
 
         if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('register', $request->request->get('_csrf_token'))) {
+                throw $this->createAccessDeniedException('Invalid CSRF token');
+            }
+
             $email = $request->request->get('email');
             $password = $request->request->get('password');
             $name = $request->request->get('name');

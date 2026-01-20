@@ -22,11 +22,20 @@ class TimeframeControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'timeframe');
+
+        $browser
             ->interceptRedirects()
             ->post('/timeframe/set', [
-                'body' => ['preset' => 'last_24h'],
+                'body' => [
+                    'preset' => 'last_24h',
+                    '_csrf_token' => $token,
+                ],
             ])
             ->assertRedirectedTo('/');
     }
@@ -35,14 +44,21 @@ class TimeframeControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'timeframe');
+
+        $browser
             ->interceptRedirects()
             ->post('/timeframe/set', [
                 'body' => [
                     'preset' => 'custom',
                     'custom_from' => '2024-01-01T10:00',
                     'custom_to' => '2024-01-15T18:00',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/');
@@ -54,11 +70,20 @@ class TimeframeControllerTest extends AbstractIntegrationTestCase
         $project = $this->createTestProject($user, 'Test Project');
         $refererUrl = '/projects/'.$project->getPublicId()->toRfc4122().'/otel/traces';
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'timeframe');
+
+        $browser
             ->interceptRedirects()
             ->post('/timeframe/set', [
-                'body' => ['preset' => 'last_7d'],
+                'body' => [
+                    'preset' => 'last_7d',
+                    '_csrf_token' => $token,
+                ],
                 'headers' => ['Referer' => 'http://localhost'.$refererUrl],
             ])
             ->assertRedirectedTo($refererUrl);
@@ -71,11 +96,20 @@ class TimeframeControllerTest extends AbstractIntegrationTestCase
         $baseUrl = '/projects/'.$project->getPublicId()->toRfc4122().'/otel/traces';
         $refererUrl = $baseUrl.'?from=2024-01-01T00:00&to=2024-01-02T00:00&page=1';
 
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'timeframe');
+
+        $browser
             ->interceptRedirects()
             ->post('/timeframe/set', [
-                'body' => ['preset' => 'last_6h'],
+                'body' => [
+                    'preset' => 'last_6h',
+                    '_csrf_token' => $token,
+                ],
                 'headers' => ['Referer' => 'http://localhost'.$refererUrl],
             ])
             // Should redirect to URL without from/to but with page preserved
@@ -114,12 +148,21 @@ class TimeframeControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
 
-        // Set a specific timeframe
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'timeframe');
+
+        // Set a specific timeframe
+        $browser
             ->interceptRedirects()
             ->post('/timeframe/set', [
-                'body' => ['preset' => 'last_30d'],
+                'body' => [
+                    'preset' => 'last_30d',
+                    '_csrf_token' => $token,
+                ],
             ])
             ->assertRedirectedTo('/')
             ->followRedirect()
@@ -131,12 +174,21 @@ class TimeframeControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
 
-        // This should silently fail with an error flash
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'timeframe');
+
+        // This should silently fail with an error flash
+        $browser
             ->interceptRedirects()
             ->post('/timeframe/set', [
-                'body' => ['preset' => 'invalid_preset_name'],
+                'body' => [
+                    'preset' => 'invalid_preset_name',
+                    '_csrf_token' => $token,
+                ],
             ])
             ->assertRedirectedTo('/');
     }
@@ -145,12 +197,21 @@ class TimeframeControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
 
-        // Custom preset without dates should not set custom range
-        $this->browser()
+        // Visit home to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'timeframe');
+
+        // Custom preset without dates should not set custom range
+        $browser
             ->interceptRedirects()
             ->post('/timeframe/set', [
-                'body' => ['preset' => 'custom'],
+                'body' => [
+                    'preset' => 'custom',
+                    '_csrf_token' => $token,
+                ],
             ])
             ->assertRedirectedTo('/');
     }

@@ -113,6 +113,7 @@ Errata.shared.start(with: Configuration(
                 <p class="mt-1 text-sm text-gray-500">Manage authentication keys for this project</p>
             </div>
             <form method="post" action="{{ path('project_create_key', { publicId: project.publicId }) }}" class="flex items-center space-x-2">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('api_key') }}">
                 <select name="environment" class="rounded-md border-gray-300 text-sm">
                     <option value="development">Development</option>
                     <option value="staging">Staging</option>
@@ -166,6 +167,7 @@ Errata.shared.start(with: Configuration(
                             {% if key.isActive %}
                                 <form method="post" action="{{ path('project_revoke_key', { publicId: project.publicId, keyId: key.id }) }}"
                                       onsubmit="return confirm('Are you sure you want to revoke this API key?')">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('api_key') }}">
                                     <button type="submit"
                                             class="text-sm text-red-600 hover:text-red-500">
                                         Revoke

@@ -21,7 +21,9 @@
                 {% endfor %}
             {% endfor %}
 
-            <form class="space-y-6" method="post">
+            <form class="space-y-6" method="post" data-turbo="false">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('register') }}">
+
                 <div>
                     <label for="name" class="block text-sm font-medium leading-6 text-gray-900">Name (optional)</label>
                     <div class="mt-2">

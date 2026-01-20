@@ -39,6 +39,10 @@ class ProjectController extends AbstractController
     public function new(Request $request): Response
     {
         if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('project', $request->request->get('_csrf_token'))) {
+                throw $this->createAccessDeniedException('Invalid CSRF token');
+            }
+
             $name = $request->request->get('name');
             $bundleId = $request->request->get('bundle_identifier');
             $platform = $request->request->get('platform');
@@ -127,6 +131,10 @@ class ProjectController extends AbstractController
         }
 
         if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('project', $request->request->get('_csrf_token'))) {
+                throw $this->createAccessDeniedException('Invalid CSRF token');
+            }
+
             $name = $request->request->get('name');
             $bundleId = $request->request->get('bundle_identifier');
             $platform = $request->request->get('platform');
@@ -180,6 +188,10 @@ class ProjectController extends AbstractController
     #[Route('/{publicId}/keys/new', name: 'create_key', methods: ['POST'])]
     public function createKey(string $publicId, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('api_key', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $project = $this->projectRepository->findByPublicId($publicId);
 
         if (null === $project) {
@@ -213,8 +225,12 @@ class ProjectController extends AbstractController
     }
 
     #[Route('/{publicId}/keys/{keyId}/revoke', name: 'revoke_key', methods: ['POST'])]
-    public function revokeKey(string $publicId, int $keyId): Response
+    public function revokeKey(string $publicId, int $keyId, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('api_key', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $project = $this->projectRepository->findByPublicId($publicId);
 
         if (null === $project) {

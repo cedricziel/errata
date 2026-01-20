@@ -44,14 +44,21 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $userId = $user->getId();
 
-        $this->browser()
+        // Visit new project form to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/projects/new');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'project');
+
+        $browser
             ->interceptRedirects()
             ->post('/projects/new', [
                 'body' => [
                     'name' => 'New Project',
                     'bundle_identifier' => 'com.example.newproject',
                     'platform' => 'ios',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirected();
@@ -68,13 +75,20 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $userId = $user->getId();
 
-        $this->browser()
+        // Visit new project form to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/projects/new');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'project');
+
+        $browser
             ->interceptRedirects()
             ->post('/projects/new', [
                 'body' => [
                     'name' => 'Project With API Key',
                     'bundle_identifier' => 'com.example.apikey',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirected();
@@ -95,12 +109,19 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $user = $this->createTestUser();
         $userId = $user->getId();
 
-        $this->browser()
+        // Visit new project form to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/projects/new');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'project');
+
+        $browser
             ->interceptRedirects()
             ->post('/projects/new', [
                 'body' => [
                     'name' => '',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/projects/new');
@@ -144,14 +165,21 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $projectId = $project->getId();
         $publicId = $project->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit project detail page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/projects/'.$publicId);
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'project');
+
+        $browser
             ->interceptRedirects()
             ->post('/projects/'.$publicId.'/edit', [
                 'body' => [
                     'name' => 'Updated Name',
                     'bundle_identifier' => 'com.example.updated',
                     'platform' => 'android',
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/projects/'.$publicId);
@@ -170,13 +198,20 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $projectId = $project->getId();
         $publicId = $project->getPublicId()->toRfc4122();
 
-        $this->browser()
+        // Visit project detail page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/projects/'.$publicId);
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'api_key');
+
+        $browser
             ->interceptRedirects()
             ->post('/projects/'.$publicId.'/keys/new', [
                 'body' => [
                     'label' => 'Production Key',
                     'environment' => ApiKey::ENV_PRODUCTION,
+                    '_csrf_token' => $token,
                 ],
             ])
             ->assertRedirectedTo('/projects/'.$publicId);
@@ -199,10 +234,20 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
 
         $this->assertTrue($keyData['apiKey']->isActive());
 
-        $this->browser()
+        // Visit project detail page to establish session
+        $browser = $this->browser()
             ->actingAs($user)
+            ->visit('/projects/'.$publicId);
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'api_key');
+
+        $browser
             ->interceptRedirects()
-            ->post('/projects/'.$publicId.'/keys/'.$apiKeyId.'/revoke')
+            ->post('/projects/'.$publicId.'/keys/'.$apiKeyId.'/revoke', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertRedirectedTo('/projects/'.$publicId);
 
         // Re-fetch API key from database after browser request
@@ -220,10 +265,20 @@ class ProjectControllerTest extends AbstractIntegrationTestCase
         $apiKeyId = $keyData['apiKey']->getId();
         $publicId = $project->getPublicId()->toRfc4122();
 
-        // Login as user2 (different organization) - should not find the project
-        $this->browser()
+        // Visit home to establish session for user2
+        $browser = $this->browser()
             ->actingAs($user2)
-            ->post('/projects/'.$publicId.'/keys/'.$apiKeyId.'/revoke')
+            ->visit('/');
+
+        $token = $this->getCsrfTokenFromBrowser($browser, 'api_key');
+
+        // Login as user2 (different organization) - should not find the project
+        $browser
+            ->post('/projects/'.$publicId.'/keys/'.$apiKeyId.'/revoke', [
+                'body' => [
+                    '_csrf_token' => $token,
+                ],
+            ])
             ->assertStatus(404);
 
         // Re-fetch API key from database after browser request

@@ -40,8 +40,12 @@ class OrganizationController extends AbstractController
     }
 
     #[Route('/switch/{publicId}', name: 'switch', methods: ['POST'])]
-    public function switch(string $publicId): Response
+    public function switch(string $publicId, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('organization_switch', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $organization = $this->getOrganizationWithAccess($publicId);
 
         $this->organizationSwitcher->setCurrentOrganization($organization);
@@ -71,6 +75,10 @@ class OrganizationController extends AbstractController
         $organization = $this->getOrganizationWithAccess($publicId, requireOwner: true);
 
         if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('organization_settings', $request->request->get('_csrf_token'))) {
+                throw $this->createAccessDeniedException('Invalid CSRF token');
+            }
+
             $name = $request->request->get('name');
 
             if (empty($name)) {
@@ -113,6 +121,10 @@ class OrganizationController extends AbstractController
     #[Route('/{publicId}/members/invite', name: 'invite_member', methods: ['POST'])]
     public function inviteMember(string $publicId, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('organization_member', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $organization = $this->getOrganizationWithAccess($publicId, requireAdmin: true);
 
         $email = $request->request->get('email');
@@ -169,6 +181,10 @@ class OrganizationController extends AbstractController
     #[Route('/{publicId}/members/{memberId}/role', name: 'change_member_role', methods: ['POST'])]
     public function changeMemberRole(string $publicId, int $memberId, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('organization_member', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $organization = $this->getOrganizationWithAccess($publicId, requireOwner: true);
 
         $membership = $this->membershipRepository->find($memberId);
@@ -204,8 +220,12 @@ class OrganizationController extends AbstractController
     }
 
     #[Route('/{publicId}/members/{memberId}/remove', name: 'remove_member', methods: ['POST'])]
-    public function removeMember(string $publicId, int $memberId): Response
+    public function removeMember(string $publicId, int $memberId, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('organization_member', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $organization = $this->getOrganizationWithAccess($publicId, requireAdmin: true);
 
         /** @var User $currentUser */

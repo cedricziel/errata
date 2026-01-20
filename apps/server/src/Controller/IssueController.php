@@ -133,6 +133,10 @@ class IssueController extends AbstractController
     #[Route('/{publicId}/status', name: 'update_status', methods: ['POST'])]
     public function updateStatus(string $publicId, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('issue', $request->request->get('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
         $issue = $this->issueRepository->findByPublicId($publicId);
 
         if (null === $issue) {
