@@ -175,9 +175,17 @@ class ParquetWriterService
         $date = new \DateTimeImmutable('@'.(int) ($timestampMs / 1000));
         $batchId = Uuid::v7();
 
+        // For protocol-based paths (aws-s3://, memory://), keep as-is
+        // For local paths, ensure trailing slash
+        if (str_contains($this->basePath, '://')) {
+            $base = $this->basePath;
+        } else {
+            $base = rtrim($this->basePath, '/').'/';
+        }
+
         return sprintf(
-            '%s/organization_id=%s/project_id=%s/event_type=%s/dt=%s/events_%s_%s.parquet',
-            rtrim($this->basePath, '/'),
+            '%sorganization_id=%s/project_id=%s/event_type=%s/dt=%s/events_%s_%s.parquet',
+            $base,
             $organizationId,
             $projectId,
             $eventType,
@@ -192,9 +200,17 @@ class ParquetWriterService
      */
     public function getProjectStoragePath(string $organizationId, string $projectId): string
     {
+        // For protocol-based paths (aws-s3://, memory://), keep as-is
+        // For local paths, ensure trailing slash
+        if (str_contains($this->basePath, '://')) {
+            $base = $this->basePath;
+        } else {
+            $base = rtrim($this->basePath, '/').'/';
+        }
+
         return sprintf(
-            '%s/organization_id=%s/project_id=%s',
-            rtrim($this->basePath, '/'),
+            '%sorganization_id=%s/project_id=%s',
+            $base,
             $organizationId,
             $projectId
         );
