@@ -342,10 +342,18 @@ class ParquetReaderService
         ?\DateTimeInterface $to = null,
     ): array {
         // Build the search path with partition pruning
-        $searchPath = rtrim($this->basePath, '/');
+        // For protocol-based paths (aws-s3://, memory://), keep as-is
+        // For local paths, strip trailing slashes
+        $isProtocolPath = str_contains($this->basePath, '://');
+        if ($isProtocolPath) {
+            $searchPath = $this->basePath;
+        } else {
+            $searchPath = rtrim($this->basePath, '/');
+        }
 
         if (null !== $organizationId) {
-            $searchPath .= '/organization_id='.$organizationId;
+            // For protocol paths, don't add leading slash since protocol ends with //
+            $searchPath .= ($isProtocolPath ? '' : '/').'organization_id='.$organizationId;
         }
 
         if (null !== $projectId && null !== $organizationId) {
