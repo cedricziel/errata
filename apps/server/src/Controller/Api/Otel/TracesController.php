@@ -87,7 +87,9 @@ class TracesController extends AbstractController
 
         return new JsonResponse([
             'partialSuccess' => new \stdClass(),
-        ], Response::HTTP_OK);
+        ], Response::HTTP_OK, [
+            'Content-Encoding' => 'identity', // Prevent nginx from adding gzip header
+        ]);
     }
 
     /**
