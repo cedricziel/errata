@@ -8,6 +8,7 @@ use App\Message\ProcessEvent;
 use App\Security\ApiKeyAuthenticator;
 use App\Service\Otel\TraceMapper;
 use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceRequest;
+use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,28 +32,22 @@ class TracesController extends AbstractController
      * Ingest OTLP traces.
      */
     #[Route('/traces', name: 'otel_traces', methods: ['POST'])]
-    public function ingest(Request $request): JsonResponse
+    public function ingest(Request $request): Response
     {
         $project = ApiKeyAuthenticator::getProject($request);
         $apiKey = ApiKeyAuthenticator::getApiKey($request);
 
+        $contentType = $request->headers->get('Content-Type', '');
+        $isProtobuf = str_contains($contentType, 'application/x-protobuf');
+
         if (null === $project || null === $apiKey) {
-            return new JsonResponse([
-                'error' => 'unauthorized',
-                'message' => 'Invalid or missing API key',
-            ], Response::HTTP_UNAUTHORIZED);
+            return $this->createErrorResponse('unauthorized', 'Invalid or missing API key', Response::HTTP_UNAUTHORIZED, $isProtobuf);
         }
 
         $content = $request->getContent();
         if ('' === $content) {
-            return new JsonResponse([
-                'error' => 'bad_request',
-                'message' => 'Empty payload',
-            ], Response::HTTP_BAD_REQUEST);
+            return $this->createErrorResponse('bad_request', 'Empty payload', Response::HTTP_BAD_REQUEST, $isProtobuf);
         }
-
-        $contentType = $request->headers->get('Content-Type', '');
-        $isProtobuf = str_contains($contentType, 'application/x-protobuf');
 
         try {
             $traceRequest = new ExportTraceServiceRequest();
@@ -60,18 +55,12 @@ class TracesController extends AbstractController
                 $traceRequest->mergeFromString($content);
             } else {
                 if (!$this->isValidJson($content)) {
-                    return new JsonResponse([
-                        'error' => 'bad_request',
-                        'message' => 'Invalid JSON payload',
-                    ], Response::HTTP_BAD_REQUEST);
+                    return $this->createErrorResponse('bad_request', 'Invalid JSON payload', Response::HTTP_BAD_REQUEST, $isProtobuf);
                 }
                 $traceRequest->mergeFromJsonString($content);
             }
         } catch (\Throwable $e) {
-            return new JsonResponse([
-                'error' => 'bad_request',
-                'message' => 'Failed to parse OTLP trace request: '.$e->getMessage(),
-            ], Response::HTTP_BAD_REQUEST);
+            return $this->createErrorResponse('bad_request', 'Failed to parse OTLP trace request: '.$e->getMessage(), Response::HTTP_BAD_REQUEST, $isProtobuf);
         }
 
         $projectId = $project->getPublicId()->toRfc4122();
@@ -85,10 +74,46 @@ class TracesController extends AbstractController
             ));
         }
 
+        return $this->createSuccessResponse($isProtobuf);
+    }
+
+    /**
+     * Create a success response in the appropriate format.
+     */
+    private function createSuccessResponse(bool $isProtobuf): Response
+    {
+        $response = new ExportTraceServiceResponse();
+
+        if ($isProtobuf) {
+            return new Response(
+                $response->serializeToString(),
+                Response::HTTP_OK,
+                [
+                    'Content-Type' => 'application/x-protobuf',
+                    'Content-Encoding' => 'identity',
+                ]
+            );
+        }
+
         return new JsonResponse([
             'partialSuccess' => new \stdClass(),
         ], Response::HTTP_OK, [
-            'Content-Encoding' => 'identity', // Prevent nginx from adding gzip header
+            'Content-Encoding' => 'identity',
+        ]);
+    }
+
+    /**
+     * Create an error response in the appropriate format.
+     */
+    private function createErrorResponse(string $error, string $message, int $statusCode, bool $isProtobuf): Response
+    {
+        // For protobuf clients, still return JSON errors as they're more readable
+        // and the OTLP spec allows this for error responses
+        return new JsonResponse([
+            'error' => $error,
+            'message' => $message,
+        ], $statusCode, [
+            'Content-Encoding' => 'identity',
         ]);
     }
 
