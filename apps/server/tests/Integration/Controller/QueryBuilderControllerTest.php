@@ -11,6 +11,7 @@ use Zenstruck\Messenger\Test\InteractsWithMessenger;
 class QueryBuilderControllerTest extends AbstractIntegrationTestCase
 {
     use InteractsWithMessenger;
+
     public function testQueryPageRequiresAuthentication(): void
     {
         $this->browser()
@@ -438,5 +439,4 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
                 $this->assertArrayHasKey('queryId', $response);
             });
     }
-
 }
