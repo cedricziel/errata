@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Service\Parquet;
 
 use App\Service\Parquet\ParquetReaderService;
+use App\Service\Storage\StorageFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -18,8 +19,13 @@ class ParquetReaderServiceTest extends TestCase
         $this->tempDir = sys_get_temp_dir().'/parquet_reader_test_'.uniqid();
         mkdir($this->tempDir, 0777, true);
 
+        $storageFactory = new StorageFactory(
+            storageType: 'local',
+            localPath: $this->tempDir,
+        );
+
         $this->reader = new ParquetReaderService(
-            $this->tempDir,
+            $storageFactory,
             new NullLogger(),
         );
     }

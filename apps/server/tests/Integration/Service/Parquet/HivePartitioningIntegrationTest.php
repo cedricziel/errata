@@ -7,6 +7,8 @@ namespace App\Tests\Integration\Service\Parquet;
 use App\Service\Parquet\ParquetReaderService;
 use App\Service\Parquet\ParquetWriterService;
 use App\Service\Parquet\WideEventSchema;
+use App\Service\Storage\StorageFactory;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
 
@@ -23,17 +25,22 @@ class HivePartitioningIntegrationTest extends KernelTestCase
         $this->storagePath = sys_get_temp_dir().'/parquet_integration_test_'.uniqid();
         mkdir($this->storagePath, 0777, true);
 
-        $container = static::getContainer();
+        $storageFactory = new StorageFactory(
+            storageType: 'local',
+            localPath: $this->storagePath,
+        );
+
+        $logger = new NullLogger();
 
         // Create services with test storage path
         $this->writer = new ParquetWriterService(
-            $this->storagePath,
-            $container->get('logger'),
+            $storageFactory,
+            $logger,
         );
 
         $this->reader = new ParquetReaderService(
-            $this->storagePath,
-            $container->get('logger'),
+            $storageFactory,
+            $logger,
         );
     }
 

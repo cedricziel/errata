@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Integration\MessageHandler;
 
 use App\Service\Parquet\ParquetReaderService;
+use App\Service\Storage\StorageFactory;
 use App\Tests\Integration\AbstractIntegrationTestCase;
+use Psr\Log\NullLogger;
 
 /**
  * Tests that ProcessEventHandler correctly writes events with Hive-style partitioning.
@@ -22,12 +24,14 @@ class ProcessEventHandlerPartitioningTest extends AbstractIntegrationTestCase
         $this->storagePath = sys_get_temp_dir().'/parquet_handler_test_'.uniqid();
         mkdir($this->storagePath, 0777, true);
 
-        // Inject our test storage path
-        $container = static::getContainer();
+        $storageFactory = new StorageFactory(
+            storageType: 'local',
+            localPath: $this->storagePath,
+        );
 
         $this->reader = new ParquetReaderService(
-            $this->storagePath,
-            $container->get('logger'),
+            $storageFactory,
+            new NullLogger(),
         );
     }
 

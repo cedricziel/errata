@@ -17,6 +17,7 @@
         "doctrine/orm": "^3.6.1",
         "easycorp/easyadmin-bundle": "^4.27.7",
         "flow-php/etl": "^0.30.0",
+        "flow-php/filesystem-async-aws-bridge": "^0.30.0",
         "flow-php/parquet": "^0.30.0",
         "nyholm/psr7": "^1.8.2",
         "open-telemetry/api": "^1.7.1",

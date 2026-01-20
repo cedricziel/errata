@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service\Parquet;
 
+use App\Service\Storage\StorageFactory;
+use Flow\Filesystem\FilesystemTable;
+use Flow\Filesystem\Path;
 use Flow\Parquet\Writer;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
 /**
  * Service for writing wide events to Parquet files.
+ *
+ * Supports both local filesystem and S3-compatible storage.
  */
 class ParquetWriterService
 {
@@ -22,11 +26,15 @@ class ParquetWriterService
     /** @var array<string, mixed>[] */
     private array $buffer = [];
 
+    private readonly FilesystemTable $filesystemTable;
+    private readonly string $basePath;
+
     public function __construct(
-        #[Autowire('%kernel.project_dir%/storage/parquet')]
-        private readonly string $storagePath,
+        private readonly StorageFactory $storageFactory,
         private readonly LoggerInterface $logger,
     ) {
+        $this->filesystemTable = $this->storageFactory->createFilesystemTable();
+        $this->basePath = $this->storageFactory->getBasePath();
     }
 
     /**
@@ -101,6 +109,7 @@ class ParquetWriterService
             $span->setAttribute('project.id', $projectId);
             $span->setAttribute('event.type', $eventType);
             $span->setAttribute('event.count', count($events));
+            $span->setAttribute('storage.type', $this->storageFactory->getStorageType());
 
             $filePath = $this->getFilePath($organizationId, $projectId, $eventType, $timestamp);
             $this->ensureDirectoryExists(dirname($filePath));
@@ -110,7 +119,15 @@ class ParquetWriterService
             $writer = new Writer();
             $schema = WideEventSchema::getSchema();
 
-            $writer->open($filePath, $schema);
+            // For S3/memory storage, use streams; for local, use the standard open method
+            if ($this->storageFactory->requiresStreamOperations()) {
+                $path = Path::realpath($filePath);
+                $filesystem = $this->filesystemTable->for($path);
+                $stream = $filesystem->writeTo($path);
+                $writer->openForStream($stream, $schema);
+            } else {
+                $writer->open($filePath, $schema);
+            }
 
             foreach ($events as $event) {
                 $normalized = WideEventSchema::normalize($event);
@@ -124,6 +141,7 @@ class ParquetWriterService
             $this->logger->info('Wrote events to Parquet file', [
                 'file' => $filePath,
                 'event_count' => count($events),
+                'storage_type' => $this->storageFactory->getStorageType(),
             ]);
 
             return $filePath;
@@ -159,7 +177,7 @@ class ParquetWriterService
 
         return sprintf(
             '%s/organization_id=%s/project_id=%s/event_type=%s/dt=%s/events_%s_%s.parquet',
-            $this->storagePath,
+            rtrim($this->basePath, '/'),
             $organizationId,
             $projectId,
             $eventType,
@@ -176,7 +194,7 @@ class ParquetWriterService
     {
         return sprintf(
             '%s/organization_id=%s/project_id=%s',
-            $this->storagePath,
+            rtrim($this->basePath, '/'),
             $organizationId,
             $projectId
         );
@@ -209,10 +227,15 @@ class ParquetWriterService
     }
 
     /**
-     * Ensure the directory exists.
+     * Ensure the directory exists (only needed for local filesystem).
      */
     private function ensureDirectoryExists(string $path): void
     {
+        // S3 and memory storage don't need directories to be created
+        if ($this->storageFactory->requiresStreamOperations()) {
+            return;
+        }
+
         if (!is_dir($path)) {
             if (!mkdir($path, 0755, true) && !is_dir($path)) {
                 throw new \RuntimeException("Failed to create directory: {$path}");

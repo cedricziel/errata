@@ -4,24 +4,32 @@ declare(strict_types=1);
 
 namespace App\Service\Parquet;
 
+use App\Service\Storage\StorageFactory;
+use Flow\Filesystem\FilesystemTable;
+use Flow\Filesystem\Path;
 use Flow\Parquet\Reader;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Finder\Finder;
 
 /**
  * Service for reading wide events from Parquet files.
+ *
+ * Supports both local filesystem and S3-compatible storage.
  */
 class ParquetReaderService
 {
+    private readonly FilesystemTable $filesystemTable;
+    private readonly string $basePath;
+
     public function __construct(
-        #[Autowire('%kernel.project_dir%/storage/parquet')]
-        private readonly string $storagePath,
+        private readonly StorageFactory $storageFactory,
         private readonly LoggerInterface $logger,
     ) {
+        $this->filesystemTable = $this->storageFactory->createFilesystemTable();
+        $this->basePath = $this->storageFactory->getBasePath();
     }
 
     /**
@@ -44,6 +52,7 @@ class ParquetReaderService
         $span->setAttribute('project.id', $projectId ?? 'all');
         $span->setAttribute('event.type', $eventType ?? 'all');
         $span->setAttribute('filter.count', count($filters));
+        $span->setAttribute('storage.type', $this->storageFactory->getStorageType());
 
         try {
             $files = $this->findParquetFiles($organizationId, $projectId, $eventType, $from, $to);
@@ -73,7 +82,8 @@ class ParquetReaderService
      */
     public function readFile(string $filePath, array $filters = []): \Generator
     {
-        if (!file_exists($filePath)) {
+        // For local files, check existence; for S3/memory, skip the check
+        if (!$this->storageFactory->requiresStreamOperations() && !file_exists($filePath)) {
             $this->logger->warning('Parquet file not found', ['file' => $filePath]);
 
             return;
@@ -81,7 +91,16 @@ class ParquetReaderService
 
         try {
             $reader = new Reader();
-            $parquetFile = $reader->read($filePath);
+
+            // For S3/memory storage, use streams; for local, use the standard read method
+            if ($this->storageFactory->requiresStreamOperations()) {
+                $path = Path::realpath($filePath);
+                $filesystem = $this->filesystemTable->for($path);
+                $stream = $filesystem->readFrom($path);
+                $parquetFile = $reader->readStream($stream);
+            } else {
+                $parquetFile = $reader->read($filePath);
+            }
 
             foreach ($parquetFile->values() as $row) {
                 $event = $this->rowToEvent($row);
@@ -94,6 +113,7 @@ class ParquetReaderService
             $this->logger->error('Failed to read Parquet file', [
                 'file' => $filePath,
                 'error' => $e->getMessage(),
+                'storage_type' => $this->storageFactory->getStorageType(),
             ]);
         }
     }
@@ -129,7 +149,8 @@ class ParquetReaderService
      */
     public function readFileWithColumns(string $filePath, array $columns, array $filters = []): \Generator
     {
-        if (!file_exists($filePath)) {
+        // For local files, check existence; for S3/memory, skip the check
+        if (!$this->storageFactory->requiresStreamOperations() && !file_exists($filePath)) {
             $this->logger->warning('Parquet file not found', ['file' => $filePath]);
 
             return;
@@ -137,7 +158,16 @@ class ParquetReaderService
 
         try {
             $reader = new Reader();
-            $parquetFile = $reader->read($filePath);
+
+            // For S3/memory storage, use streams; for local, use the standard read method
+            if ($this->storageFactory->requiresStreamOperations()) {
+                $path = Path::realpath($filePath);
+                $filesystem = $this->filesystemTable->for($path);
+                $stream = $filesystem->readFrom($path);
+                $parquetFile = $reader->readStream($stream);
+            } else {
+                $parquetFile = $reader->read($filePath);
+            }
 
             // Use column pruning if columns are specified
             $valueIterator = !empty($columns)
@@ -155,6 +185,7 @@ class ParquetReaderService
             $this->logger->error('Failed to read Parquet file', [
                 'file' => $filePath,
                 'error' => $e->getMessage(),
+                'storage_type' => $this->storageFactory->getStorageType(),
             ]);
         }
     }
@@ -244,6 +275,7 @@ class ParquetReaderService
         $span->setAttribute('organization.id', $organizationId ?? 'all');
         $span->setAttribute('project.id', $projectId ?? 'all');
         $span->setAttribute('limit', $limit);
+        $span->setAttribute('storage.type', $this->storageFactory->getStorageType());
 
         try {
             $events = [];
@@ -288,8 +320,179 @@ class ParquetReaderService
         ?\DateTimeInterface $from = null,
         ?\DateTimeInterface $to = null,
     ): array {
+        // S3/memory storage uses fstab-based file discovery
+        if ($this->storageFactory->requiresStreamOperations()) {
+            return $this->findStreamBasedParquetFiles($organizationId, $projectId, $eventType, $from, $to);
+        }
+
+        // Local storage uses Symfony Finder
+        return $this->findLocalParquetFiles($organizationId, $projectId, $eventType, $from, $to);
+    }
+
+    /**
+     * Find Parquet files using FilesystemTable (for S3/memory storage).
+     *
+     * @return array<string>
+     */
+    private function findStreamBasedParquetFiles(
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
+        ?\DateTimeInterface $from = null,
+        ?\DateTimeInterface $to = null,
+    ): array {
+        // Build the search path with partition pruning
+        $searchPath = rtrim($this->basePath, '/');
+
+        if (null !== $organizationId) {
+            $searchPath .= '/organization_id='.$organizationId;
+        }
+
+        if (null !== $projectId && null !== $organizationId) {
+            $searchPath .= '/project_id='.$projectId;
+        }
+
+        if (null !== $eventType && null !== $organizationId && null !== $projectId) {
+            $searchPath .= '/event_type='.$eventType;
+        }
+
+        try {
+            $path = Path::realpath($searchPath);
+            $filesystem = $this->filesystemTable->for($path);
+            $files = [];
+
+            foreach ($filesystem->list($path) as $fileInfo) {
+                $filePath = $fileInfo->path->uri();
+
+                // Only include .parquet files
+                if (!str_ends_with($filePath, '.parquet')) {
+                    // If it's a directory, recurse into it
+                    if ($fileInfo->isDirectory()) {
+                        $files = array_merge($files, $this->listParquetFilesRecursive($filePath, $organizationId, $projectId, $eventType, $from, $to));
+                    }
+
+                    continue;
+                }
+
+                // Apply partition filters
+                $partitions = $this->extractPartitionValues($filePath);
+
+                if (null !== $organizationId && ($partitions['organization_id'] ?? null) !== $organizationId) {
+                    continue;
+                }
+
+                if (null !== $projectId && ($partitions['project_id'] ?? null) !== $projectId) {
+                    continue;
+                }
+
+                if (null !== $eventType && ($partitions['event_type'] ?? null) !== $eventType) {
+                    continue;
+                }
+
+                if ((null !== $from || null !== $to) && isset($partitions['dt'])) {
+                    if (!$this->dateMatchesRange($partitions['dt'], $from, $to)) {
+                        continue;
+                    }
+                }
+
+                $files[] = $filePath;
+            }
+
+            sort($files);
+
+            return $files;
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to list files', [
+                'path' => $searchPath,
+                'storage_type' => $this->storageFactory->getStorageType(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Recursively list Parquet files using FilesystemTable.
+     *
+     * @return array<string>
+     */
+    private function listParquetFilesRecursive(
+        string $dirPath,
+        ?string $organizationId,
+        ?string $projectId,
+        ?string $eventType,
+        ?\DateTimeInterface $from,
+        ?\DateTimeInterface $to,
+    ): array {
+        try {
+            $path = Path::realpath($dirPath);
+            $filesystem = $this->filesystemTable->for($path);
+            $files = [];
+
+            foreach ($filesystem->list($path) as $fileInfo) {
+                $filePath = $fileInfo->path->uri();
+
+                if ($fileInfo->isDirectory()) {
+                    $files = array_merge($files, $this->listParquetFilesRecursive($filePath, $organizationId, $projectId, $eventType, $from, $to));
+
+                    continue;
+                }
+
+                if (!str_ends_with($filePath, '.parquet')) {
+                    continue;
+                }
+
+                // Apply partition filters
+                $partitions = $this->extractPartitionValues($filePath);
+
+                if (null !== $organizationId && ($partitions['organization_id'] ?? null) !== $organizationId) {
+                    continue;
+                }
+
+                if (null !== $projectId && ($partitions['project_id'] ?? null) !== $projectId) {
+                    continue;
+                }
+
+                if (null !== $eventType && ($partitions['event_type'] ?? null) !== $eventType) {
+                    continue;
+                }
+
+                if ((null !== $from || null !== $to) && isset($partitions['dt'])) {
+                    if (!$this->dateMatchesRange($partitions['dt'], $from, $to)) {
+                        continue;
+                    }
+                }
+
+                $files[] = $filePath;
+            }
+
+            return $files;
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to list directory', [
+                'path' => $dirPath,
+                'storage_type' => $this->storageFactory->getStorageType(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Find Parquet files on local filesystem using Symfony Finder.
+     *
+     * @return array<string>
+     */
+    private function findLocalParquetFiles(
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
+        ?\DateTimeInterface $from = null,
+        ?\DateTimeInterface $to = null,
+    ): array {
         // Build the base path with partition pruning
-        $basePath = $this->storagePath;
+        $basePath = rtrim($this->basePath, '/');
 
         if (null !== $organizationId) {
             $basePath .= '/organization_id='.$organizationId;
@@ -298,7 +501,7 @@ class ParquetReaderService
         if (null !== $projectId) {
             if (null === $organizationId) {
                 // If no org specified but project is, we need to search all orgs
-                $basePath = $this->storagePath;
+                $basePath = rtrim($this->basePath, '/');
             } else {
                 $basePath .= '/project_id='.$projectId;
             }
@@ -417,7 +620,7 @@ class ParquetReaderService
             return [];
         }
 
-        $basePath = $this->storagePath.'/'.$projectId;
+        $basePath = rtrim($this->basePath, '/').'/'.$projectId;
 
         if (!is_dir($basePath)) {
             return [];

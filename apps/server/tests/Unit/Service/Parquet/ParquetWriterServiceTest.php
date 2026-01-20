@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Service\Parquet;
 
 use App\Service\Parquet\ParquetWriterService;
+use App\Service\Storage\StorageFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -18,8 +19,13 @@ class ParquetWriterServiceTest extends TestCase
         $this->tempDir = sys_get_temp_dir().'/parquet_test_'.uniqid();
         mkdir($this->tempDir, 0777, true);
 
+        $storageFactory = new StorageFactory(
+            storageType: 'local',
+            localPath: $this->tempDir,
+        );
+
         $this->writer = new ParquetWriterService(
-            $this->tempDir,
+            $storageFactory,
             new NullLogger(),
         );
     }
