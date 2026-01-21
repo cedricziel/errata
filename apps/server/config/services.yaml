@@ -17,6 +17,10 @@ parameters:
     otel.frontend.service_name: '%env(string:OTEL_FRONTEND_SERVICE_NAME)%'
     otel.frontend.service_version: '%env(string:OTEL_FRONTEND_SERVICE_VERSION)%'
 
+    # OpenTelemetry backend (custom sampler) configuration
+    otel.backend.enabled: '%env(bool:OTEL_ENABLED)%'
+    otel.backend.excluded_urls: '%env(string:OTEL_PHP_EXCLUDED_URLS)%'
+
     # Storage configuration (local or S3/MinIO)
     # Default values for env var fallback
     storage.type.default: 'local'
@@ -85,3 +89,9 @@ services:
     App\Service\Parquet\ParquetWriterService:
         arguments:
             $logger: '@monolog.logger.performance'
+
+    # OpenTelemetry custom initializer with URL-filtering sampler
+    App\Telemetry\OtelInitializer:
+        arguments:
+            $enabled: '%otel.backend.enabled%'
+            $excludedUrlPatterns: '%env(csv:OTEL_PHP_EXCLUDED_URLS)%'
