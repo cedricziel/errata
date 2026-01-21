@@ -84,7 +84,10 @@
     "autoload": {
         "psr-4": {
             "App\\": "src/"
-        }
+        },
+        "files": [
+            "src/Telemetry/_register.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
