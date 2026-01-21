@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service\Parquet;
 
+use App\Service\Parquet\FlowConfigFactory;
 use App\Service\Parquet\ParquetWriterService;
 use App\Service\Storage\StorageFactory;
 use PHPUnit\Framework\TestCase;
@@ -24,8 +25,11 @@ class ParquetWriterServiceTest extends TestCase
             localPath: $this->tempDir,
         );
 
+        $flowConfigFactory = new FlowConfigFactory($storageFactory);
+
         $this->writer = new ParquetWriterService(
             $storageFactory,
+            $flowConfigFactory,
             new NullLogger(),
         );
     }
@@ -157,8 +161,11 @@ class ParquetWriterServiceTest extends TestCase
             localPath: '/unused',
         );
 
+        $flowConfigFactory = new FlowConfigFactory($memoryStorageFactory);
+
         $memoryWriter = new ParquetWriterService(
             $memoryStorageFactory,
+            $flowConfigFactory,
             new NullLogger(),
         );
 
@@ -177,8 +184,11 @@ class ParquetWriterServiceTest extends TestCase
             localPath: '/unused',
         );
 
+        $flowConfigFactory = new FlowConfigFactory($memoryStorageFactory);
+
         $memoryWriter = new ParquetWriterService(
             $memoryStorageFactory,
+            $flowConfigFactory,
             new NullLogger(),
         );
 

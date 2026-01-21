@@ -104,6 +104,46 @@ final class StorageFactory
     }
 
     /**
+     * Get the S3 bucket name.
+     */
+    public function getS3Bucket(): ?string
+    {
+        return $this->s3Bucket;
+    }
+
+    /**
+     * Get the local storage path.
+     */
+    public function getLocalPath(): string
+    {
+        return $this->localPath;
+    }
+
+    /**
+     * Get the S3 client configuration array.
+     *
+     * @return array<string, mixed>
+     */
+    public function getS3ClientConfig(): array
+    {
+        $config = [
+            'region' => $this->s3Region ?? 'us-east-1',
+            'accessKeyId' => $this->s3AccessKey,
+            'accessKeySecret' => $this->s3SecretKey,
+        ];
+
+        if (null !== $this->s3Endpoint && '' !== $this->s3Endpoint) {
+            $config['endpoint'] = $this->s3Endpoint;
+        }
+
+        if ($this->s3UsePathStyle) {
+            $config['pathStyleEndpoint'] = true;
+        }
+
+        return $config;
+    }
+
+    /**
      * Create an S3-backed FilesystemTable using the AsyncAWS bridge.
      */
     private function createS3FilesystemTable(): FilesystemTable

@@ -73,7 +73,15 @@ services:
         arguments:
             $cache: '@async_query.cache'
 
+    # Flow-PHP configuration factory (autowired)
+    App\Service\Parquet\FlowConfigFactory: ~
+
     # Parquet reader service with performance logger
     App\Service\Parquet\ParquetReaderService:
+        arguments:
+            $logger: '@monolog.logger.performance'
+
+    # Parquet writer service with performance logger
+    App\Service\Parquet\ParquetWriterService:
         arguments:
             $logger: '@monolog.logger.performance'

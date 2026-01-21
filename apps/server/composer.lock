@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "dff0a0a5200b63b3232eda4ffb0ca1bf",
+    "content-hash": "3968023c1f9506c76227cc5fc3c949d7",
     "packages": [
         {
             "name": "api-platform/core",
@@ -1969,6 +1969,66 @@
                 }
             ],
             "time": "2026-01-06T12:57:11+00:00"
+        },
+        {
+            "name": "flow-php/etl-adapter-parquet",
+            "version": "0.30.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/flow-php/etl-adapter-parquet.git",
+                "reference": "edf40de0943a85e63b5cca3d7d879d46592534df"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/flow-php/etl-adapter-parquet/zipball/edf40de0943a85e63b5cca3d7d879d46592534df",
+                "reference": "edf40de0943a85e63b5cca3d7d879d46592534df",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "flow-php/etl": "self.version",
+                "flow-php/parquet": "self.version",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/Flow/ETL/Adapter/Parquet/functions.php"
+                ],
+                "psr-4": {
+                    "Flow\\": [
+                        "src/Flow"
+                    ]
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHP ETL - Adapter - Parquet",
+            "keywords": [
+                "adapter",
+                "etl",
+                "extract",
+                "load",
+                "parquet",
+                "transform"
+            ],
+            "support": {
+                "issues": "https://github.com/flow-php/etl-adapter-parquet/issues",
+                "source": "https://github.com/flow-php/etl-adapter-parquet/tree/0.30.0"
+            },
+            "funding": [
+                {
+                    "url": "https://flow-php.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/norberttech",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-01-06T12:55:53+00:00"
         },
         {
             "name": "flow-php/filesystem",

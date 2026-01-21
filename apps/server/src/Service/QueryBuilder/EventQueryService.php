@@ -25,22 +25,30 @@ class EventQueryService
      * Execute a query and return results with facets.
      *
      * Uses single-pass processing for efficiency:
-     * 1. Read events from Parquet files
+     * 1. Read events from Parquet files via DataFrame API
      * 2. Apply filters
      * 3. Compute facets and collect events in one pass
      */
     public function executeQuery(QueryRequest $request, ?string $organizationId = null): QueryResult
     {
-        // Get list of parquet files matching the base criteria
-        $files = $this->parquetReader->findParquetFiles(
+        // Determine which columns we need
+        $columns = $this->getRequiredColumns($request);
+
+        // Single-pass processing: read, filter, compute facets and collect events
+        $result = $this->processEventsInSinglePass(
             organizationId: $organizationId,
             projectId: $request->projectId,
-            eventType: null,
-            from: $request->startDate,
-            to: $request->endDate,
+            startDate: $request->startDate,
+            endDate: $request->endDate,
+            filters: $request->filters,
+            columns: $columns,
+            groupBy: $request->groupBy,
+            limit: $request->limit,
+            offset: $request->getOffset(),
         );
 
-        if (empty($files)) {
+        // Handle empty results
+        if (0 === $result['total']) {
             return new QueryResult(
                 events: [],
                 total: 0,
@@ -50,19 +58,6 @@ class EventQueryService
                 limit: $request->limit,
             );
         }
-
-        // Determine which columns we need
-        $columns = $this->getRequiredColumns($request);
-
-        // Single-pass processing: read, filter, compute facets and collect events
-        $result = $this->processEventsInSinglePass(
-            files: $files,
-            filters: $request->filters,
-            columns: $columns,
-            groupBy: $request->groupBy,
-            limit: $request->limit,
-            offset: $request->getOffset(),
-        );
 
         // Compute facets from the collected facet data
         $facets = $this->facetAggregation->computeFacetsFromCounts(
@@ -110,14 +105,16 @@ class EventQueryService
     /**
      * Process events in a single pass: filter, compute facets, and collect paginated results.
      *
-     * @param array<string>      $files
      * @param array<QueryFilter> $filters
      * @param array<string>      $columns
      *
      * @return array{events: array<array<string, mixed>>, total: int, facetCounts: array<string, array<string, int>>, groupedResults: array<array<string, mixed>>}
      */
     private function processEventsInSinglePass(
-        array $files,
+        ?string $organizationId,
+        ?string $projectId,
+        ?\DateTimeInterface $startDate,
+        ?\DateTimeInterface $endDate,
         array $filters,
         array $columns,
         ?string $groupBy,
@@ -134,8 +131,15 @@ class EventQueryService
         $groupedData = [];
         $total = 0;
 
-        // Read events from all files with column pruning
-        foreach ($this->parquetReader->readEventsWithColumns($files, $columns, $filters) as $event) {
+        // Read events using the new DataFrame-based reader with column pruning
+        foreach ($this->parquetReader->readEventsWithColumns(
+            organizationId: $organizationId,
+            projectId: $projectId,
+            from: $startDate,
+            to: $endDate,
+            columns: $columns,
+            filters: $filters,
+        ) as $event) {
             ++$total;
 
             // Collect facet counts in the same pass

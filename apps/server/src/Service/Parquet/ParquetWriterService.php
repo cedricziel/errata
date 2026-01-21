@@ -5,17 +5,26 @@ declare(strict_types=1);
 namespace App\Service\Parquet;
 
 use App\Service\Storage\StorageFactory;
-use Flow\Filesystem\FilesystemTable;
-use Flow\Filesystem\Path;
-use Flow\Parquet\Writer;
+use Flow\ETL\Row;
+use Flow\ETL\Row\Entry;
+use Flow\ETL\Rows;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Uid\Uuid;
 
+use function Flow\ETL\Adapter\Parquet\to_parquet;
+use function Flow\ETL\DSL\bool_entry;
+use function Flow\ETL\DSL\data_frame;
+use function Flow\ETL\DSL\float_entry;
+use function Flow\ETL\DSL\from_rows;
+use function Flow\ETL\DSL\int_entry;
+use function Flow\ETL\DSL\null_entry;
+use function Flow\ETL\DSL\str_entry;
+
 /**
- * Service for writing wide events to Parquet files.
+ * Service for writing wide events to Parquet files using Flow-PHP DataFrame API.
  *
  * Supports both local filesystem and S3-compatible storage.
  */
@@ -26,15 +35,11 @@ class ParquetWriterService
     /** @var array<string, mixed>[] */
     private array $buffer = [];
 
-    private readonly FilesystemTable $filesystemTable;
-    private readonly string $basePath;
-
     public function __construct(
         private readonly StorageFactory $storageFactory,
+        private readonly FlowConfigFactory $flowConfigFactory,
         private readonly LoggerInterface $logger,
     ) {
-        $this->filesystemTable = $this->storageFactory->createFilesystemTable();
-        $this->basePath = $this->storageFactory->getBasePath();
     }
 
     /**
@@ -85,7 +90,7 @@ class ParquetWriterService
     }
 
     /**
-     * Write events directly to a Parquet file.
+     * Write events directly to a Parquet file using DataFrame API.
      *
      * @param array<array<string, mixed>> $events
      */
@@ -112,29 +117,29 @@ class ParquetWriterService
             $span->setAttribute('storage.type', $this->storageFactory->getStorageType());
 
             $filePath = $this->getFilePath($organizationId, $projectId, $eventType, $timestamp);
-            $this->ensureDirectoryExists(dirname($filePath));
+
+            // Ensure directory exists for local filesystem
+            if (!$this->storageFactory->requiresStreamOperations()) {
+                $this->ensureDirectoryExists(dirname($filePath));
+            }
 
             $span->setAttribute('file.path', $filePath);
 
-            $writer = new Writer();
-            $schema = WideEventSchema::getSchema();
-
-            // For S3/memory storage, use streams; for local, use the standard open method
-            if ($this->storageFactory->requiresStreamOperations()) {
-                $path = Path::realpath($filePath);
-                $filesystem = $this->filesystemTable->for($path);
-                $stream = $filesystem->writeTo($path);
-                $writer->openForStream($stream, $schema);
-            } else {
-                $writer->open($filePath, $schema);
-            }
-
+            // Convert events to Flow Rows
+            $rows = [];
             foreach ($events as $event) {
                 $normalized = WideEventSchema::normalize($event);
-                $writer->writeRow($this->eventToRow($normalized));
+                $rows[] = $this->eventToRow($normalized);
             }
 
-            $writer->close();
+            // Get config with proper filesystem mounting (S3 or local)
+            $config = $this->flowConfigFactory->createConfig();
+
+            // Write using DataFrame API
+            data_frame($config)
+                ->read(from_rows(new Rows(...$rows)))
+                ->write(to_parquet($filePath))
+                ->run();
 
             $span->setStatus(StatusCode::STATUS_OK);
 
@@ -175,12 +180,14 @@ class ParquetWriterService
         $date = new \DateTimeImmutable('@'.(int) ($timestampMs / 1000));
         $batchId = Uuid::v7();
 
+        $basePath = $this->storageFactory->getBasePath();
+
         // For protocol-based paths (aws-s3://, memory://), keep as-is
         // For local paths, ensure trailing slash
-        if (str_contains($this->basePath, '://')) {
-            $base = $this->basePath;
+        if (str_contains($basePath, '://')) {
+            $base = $basePath;
         } else {
-            $base = rtrim($this->basePath, '/').'/';
+            $base = rtrim($basePath, '/').'/';
         }
 
         return sprintf(
@@ -200,12 +207,14 @@ class ParquetWriterService
      */
     public function getProjectStoragePath(string $organizationId, string $projectId): string
     {
+        $basePath = $this->storageFactory->getBasePath();
+
         // For protocol-based paths (aws-s3://, memory://), keep as-is
         // For local paths, ensure trailing slash
-        if (str_contains($this->basePath, '://')) {
-            $base = $this->basePath;
+        if (str_contains($basePath, '://')) {
+            $base = $basePath;
         } else {
-            $base = rtrim($this->basePath, '/').'/';
+            $base = rtrim($basePath, '/').'/';
         }
 
         return sprintf(
@@ -217,29 +226,56 @@ class ParquetWriterService
     }
 
     /**
-     * Convert an event array to a row array for Parquet.
+     * Convert an event array to a Flow Row.
      *
      * @param array<string, mixed> $event
-     *
-     * @return array<string, mixed>
      */
-    private function eventToRow(array $event): array
+    private function eventToRow(array $event): Row
     {
-        // Ensure JSON fields are encoded
-        if (isset($event['tags']) && is_array($event['tags'])) {
-            $event['tags'] = json_encode($event['tags']);
-        }
-        if (isset($event['context']) && is_array($event['context'])) {
-            $event['context'] = json_encode($event['context']);
-        }
-        if (isset($event['breadcrumbs']) && is_array($event['breadcrumbs'])) {
-            $event['breadcrumbs'] = json_encode($event['breadcrumbs']);
-        }
-        if (isset($event['stack_trace']) && is_array($event['stack_trace'])) {
-            $event['stack_trace'] = json_encode($event['stack_trace']);
+        $entries = [];
+
+        foreach ($event as $key => $value) {
+            // Encode JSON fields
+            if (in_array($key, ['tags', 'context', 'breadcrumbs', 'stack_trace'], true) && is_array($value)) {
+                $value = json_encode($value);
+            }
+
+            $entries[] = $this->createEntry($key, $value);
         }
 
-        return $event;
+        return Row::create(...$entries);
+    }
+
+    /**
+     * Create an Entry from a key-value pair with appropriate type.
+     */
+    private function createEntry(string $key, mixed $value): Entry
+    {
+        if (null === $value) {
+            return null_entry($key);
+        }
+
+        if (is_int($value)) {
+            return int_entry($key, $value);
+        }
+
+        if (is_float($value)) {
+            return float_entry($key, $value);
+        }
+
+        if (is_bool($value)) {
+            return bool_entry($key, $value);
+        }
+
+        if (is_string($value)) {
+            return str_entry($key, $value);
+        }
+
+        if (is_array($value)) {
+            return str_entry($key, json_encode($value) ?: '[]');
+        }
+
+        return str_entry($key, (string) $value);
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Service\Parquet;
 
+use App\Service\Parquet\FlowConfigFactory;
 use App\Service\Parquet\ParquetReaderService;
 use App\Service\Parquet\ParquetWriterService;
 use App\Service\Parquet\WideEventSchema;
@@ -30,16 +31,19 @@ class HivePartitioningIntegrationTest extends KernelTestCase
             localPath: $this->storagePath,
         );
 
+        $flowConfigFactory = new FlowConfigFactory($storageFactory);
         $logger = new NullLogger();
 
         // Create services with test storage path
         $this->writer = new ParquetWriterService(
             $storageFactory,
+            $flowConfigFactory,
             $logger,
         );
 
         $this->reader = new ParquetReaderService(
             $storageFactory,
+            $flowConfigFactory,
             $logger,
         );
     }

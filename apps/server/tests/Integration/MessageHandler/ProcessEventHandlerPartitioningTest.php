@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\MessageHandler;
 
+use App\Service\Parquet\FlowConfigFactory;
 use App\Service\Parquet\ParquetReaderService;
 use App\Service\Storage\StorageFactory;
 use App\Tests\Integration\AbstractIntegrationTestCase;
@@ -29,8 +30,11 @@ class ProcessEventHandlerPartitioningTest extends AbstractIntegrationTestCase
             localPath: $this->storagePath,
         );
 
+        $flowConfigFactory = new FlowConfigFactory($storageFactory);
+
         $this->reader = new ParquetReaderService(
             $storageFactory,
+            $flowConfigFactory,
             new NullLogger(),
         );
     }
