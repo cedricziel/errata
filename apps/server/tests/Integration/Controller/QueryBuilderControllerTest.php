@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Controller;
 
+use App\Message\ComputeFacetBatch;
 use App\Message\ExecuteQuery;
 use App\Tests\Integration\AbstractIntegrationTestCase;
 use Zenstruck\Messenger\Test\InteractsWithMessenger;
@@ -437,6 +438,223 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             ->use(function ($browser) {
                 $response = $browser->json()->decoded();
                 $this->assertArrayHasKey('queryId', $response);
+            });
+    }
+
+    // === Parallel Facet Computation Tests ===
+
+    public function testFullAsyncQueryFlowWithDeferredFacets(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // 1. Submit a query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful()
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // 2. Verify ExecuteQuery message was queued
+        $this->transport('async')
+            ->queue()
+            ->assertContains(ExecuteQuery::class, 1);
+
+        // 3. Process the ExecuteQuery message
+        $this->transport('async')->process(1);
+
+        // 4. Verify ComputeFacetBatch messages were dispatched (4 batches)
+        $this->transport('async')
+            ->queue()
+            ->assertContains(ComputeFacetBatch::class, 4);
+
+        // 5. Verify query status is completed with priority facets
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/query/status/'.$queryId)
+            ->assertSuccessful()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertSame('completed', $response['status']);
+                $this->assertTrue($response['hasResult']);
+            });
+
+        // 6. Verify facet batch tracking was initialized
+        /** @var \App\Service\QueryBuilder\AsyncQueryResultStore $resultStore */
+        $resultStore = static::getContainer()->get(\App\Service\QueryBuilder\AsyncQueryResultStore::class);
+        $state = $resultStore->getQueryState($queryId);
+
+        $this->assertArrayHasKey('facetBatches', $state);
+        $this->assertCount(4, $state['facetBatches']);
+
+        // 7. Process all facet batch messages
+        $this->transport('async')->process(4);
+
+        // 8. Verify all batches completed
+        $state = $resultStore->getQueryState($queryId);
+        foreach (['device', 'app', 'trace', 'user'] as $batchId) {
+            $this->assertSame('completed', $state['facetBatches'][$batchId]['status']);
+        }
+    }
+
+    public function testQuerySubmitDispatchesCorrectFacetBatches(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful();
+
+        // Process ExecuteQuery
+        $this->transport('async')->process(1);
+
+        // Check that all 4 facet batches were dispatched
+        $queue = $this->transport('async')->queue();
+
+        // Extract batch IDs from queued messages
+        $batchIds = [];
+        foreach ($queue->messages() as $message) {
+            if ($message instanceof ComputeFacetBatch) {
+                $batchIds[] = $message->batchId;
+            }
+        }
+
+        $this->assertContains('device', $batchIds);
+        $this->assertContains('app', $batchIds);
+        $this->assertContains('trace', $batchIds);
+        $this->assertContains('user', $batchIds);
+    }
+
+    public function testCancelledQuerySkipsFacetBatches(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // Submit a query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->assertSuccessful()
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // Cancel the query before processing
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/cancel/'.$queryId)
+            ->assertSuccessful();
+
+        // Process the ExecuteQuery (should detect cancellation)
+        $this->transport('async')->process(1);
+
+        // Verify no facet batches were dispatched
+        $this->transport('async')
+            ->queue()
+            ->assertNotContains(ComputeFacetBatch::class);
+    }
+
+    public function testFacetBatchesCanBeProcessedInParallel(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // Submit query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // Process ExecuteQuery
+        $this->transport('async')->process(1);
+
+        /** @var \App\Service\QueryBuilder\AsyncQueryResultStore $resultStore */
+        $resultStore = static::getContainer()->get(\App\Service\QueryBuilder\AsyncQueryResultStore::class);
+
+        // Process batches one at a time and verify progressive completion
+        for ($i = 1; $i <= 4; ++$i) {
+            $this->transport('async')->process(1);
+
+            $completedCount = 4 - count($resultStore->getPendingFacetBatches($queryId));
+            $this->assertSame($i, $completedCount);
+        }
+
+        // All batches should be complete
+        $this->assertTrue($resultStore->areFacetBatchesComplete($queryId));
+    }
+
+    public function testStatusEndpointReflectsFacetBatchState(): void
+    {
+        $user = $this->createTestUser();
+        $this->createTestProject($user, 'Test Project');
+
+        $queryId = null;
+
+        // Submit query
+        $this->browser()
+            ->actingAs($user)
+            ->post('/query/submit', [
+                'json' => [
+                    'filters' => [],
+                    'page' => 1,
+                    'limit' => 50,
+                ],
+            ])
+            ->use(function ($browser) use (&$queryId) {
+                $response = $browser->json()->decoded();
+                $queryId = $response['queryId'];
+            });
+
+        // Process ExecuteQuery
+        $this->transport('async')->process(1);
+
+        // Status should be completed (even with pending facet batches)
+        $this->browser()
+            ->actingAs($user)
+            ->visit('/query/status/'.$queryId)
+            ->assertSuccessful()
+            ->use(function ($browser) {
+                $response = $browser->json()->decoded();
+                $this->assertSame('completed', $response['status']);
             });
     }
 }

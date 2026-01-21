@@ -48,6 +48,8 @@ class QuerySseController extends AbstractController
             $lastHeartbeat = time();
             $lastStatus = null;
             $lastProgress = -1;
+            $mainResultSent = false;
+            $sentBatches = [];
 
             while (true) {
                 // Check for timeout
@@ -84,7 +86,8 @@ class QuerySseController extends AbstractController
 
                 // Handle terminal states
                 if ($status->isTerminal()) {
-                    if (QueryStatus::COMPLETED === $status) {
+                    if (QueryStatus::COMPLETED === $status && !$mainResultSent) {
+                        // Send main result (with priority facets)
                         $this->sendSseEvent('result', [
                             'events' => $state['result']['events'] ?? [],
                             'total' => $state['result']['total'] ?? 0,
@@ -93,12 +96,48 @@ class QuerySseController extends AbstractController
                             'page' => $state['result']['page'] ?? 1,
                             'limit' => $state['result']['limit'] ?? 50,
                         ]);
+                        $mainResultSent = true;
+
+                        // If no facet batches, we're done
+                        if (!isset($state['facetBatches']) || empty($state['facetBatches'])) {
+                            break;
+                        }
                     } elseif (QueryStatus::FAILED === $status) {
                         $this->sendSseEvent('error', ['message' => $state['error'] ?? 'Unknown error']);
+                        break;
                     } elseif (QueryStatus::CANCELLED === $status) {
                         $this->sendSseEvent('cancelled', ['message' => 'Query was cancelled']);
+                        break;
                     }
-                    break;
+                }
+
+                // If main result sent, poll for facet batches
+                if ($mainResultSent && isset($state['facetBatches'])) {
+                    $allBatchesComplete = true;
+
+                    foreach ($state['facetBatches'] as $batchId => $batch) {
+                        // Send completed batch if not already sent
+                        if ('completed' === $batch['status'] && !isset($sentBatches[$batchId])) {
+                            $this->sendSseEvent('facet_batch', [
+                                'batchId' => $batchId,
+                                'facets' => $batch['facets'] ?? [],
+                            ]);
+                            $sentBatches[$batchId] = true;
+                        }
+
+                        // Check if batch is still pending
+                        if ('pending' === $batch['status']) {
+                            $allBatchesComplete = false;
+                        }
+                    }
+
+                    // All batches complete, send final event and exit
+                    if ($allBatchesComplete) {
+                        $this->sendSseEvent('facets_complete', [
+                            'totalBatches' => count($state['facetBatches']),
+                        ]);
+                        break;
+                    }
                 }
 
                 // Send heartbeat if needed

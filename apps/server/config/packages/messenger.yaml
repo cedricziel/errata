@@ -30,6 +30,9 @@ framework:
             # Route query execution to async
             App\Message\ExecuteQuery: async
 
+            # Route facet batch computation to async
+            App\Message\ComputeFacetBatch: async
+
 when@test:
     framework:
         messenger:

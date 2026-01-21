@@ -308,4 +308,38 @@ class AttributeMetadataService
             'operators' => QueryFilter::getOperatorLabels(),
         ];
     }
+
+    /**
+     * Get facetable attributes grouped by priority.
+     *
+     * Priority facets are computed with the main query for immediate display.
+     * Deferred facets are computed asynchronously in batches.
+     *
+     * @return array{priority: array<string>, deferred: array<string>}
+     */
+    public function getFacetsByPriority(): array
+    {
+        return [
+            'priority' => ['event_type', 'severity', 'environment', 'exception_type'],
+            'deferred' => [
+                'device_model', 'os_name', 'os_version',
+                'app_version', 'app_build',
+                'operation', 'span_status',
+                'user_id', 'locale',
+            ],
+        ];
+    }
+
+    /**
+     * Get only priority facetable attributes (computed with main query).
+     *
+     * @return array<string, array{type: string, label: string, facetType: string, facetExpanded: bool}>
+     */
+    public function getPriorityFacetableAttributes(): array
+    {
+        $priorityKeys = $this->getFacetsByPriority()['priority'];
+        $all = $this->getFacetableAttributes();
+
+        return array_intersect_key($all, array_flip($priorityKeys));
+    }
 }

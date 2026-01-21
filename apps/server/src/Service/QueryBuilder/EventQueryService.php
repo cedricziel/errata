@@ -76,6 +76,61 @@ class EventQueryService
     }
 
     /**
+     * Execute a query with only priority facets (for async execution with deferred facets).
+     *
+     * Priority facets are computed immediately, while deferred facets
+     * are dispatched for parallel computation via message queue.
+     */
+    public function executeQueryWithPriorityFacets(QueryRequest $request, ?string $organizationId = null): QueryResult
+    {
+        $priorityFacets = $this->attributeMetadata->getFacetsByPriority()['priority'];
+
+        // Determine which columns we need (only priority facet columns)
+        $columns = $this->getRequiredColumns($request, $priorityFacets);
+
+        // Single-pass processing: read, filter, compute priority facets and collect events
+        $result = $this->processEventsInSinglePass(
+            organizationId: $organizationId,
+            projectId: $request->projectId,
+            startDate: $request->startDate,
+            endDate: $request->endDate,
+            filters: $request->filters,
+            columns: $columns,
+            groupBy: $request->groupBy,
+            limit: $request->limit,
+            offset: $request->getOffset(),
+            facetAttributes: $priorityFacets,
+        );
+
+        // Handle empty results
+        if (0 === $result['total']) {
+            return new QueryResult(
+                events: [],
+                total: 0,
+                facets: $this->facetAggregation->createEmptyFacets($request->filters),
+                groupedResults: [],
+                page: $request->page,
+                limit: $request->limit,
+            );
+        }
+
+        // Compute only priority facets from the collected data
+        $facets = $this->facetAggregation->computeFacetsFromCounts(
+            $result['facetCounts'],
+            $request->filters,
+        );
+
+        return new QueryResult(
+            events: $result['events'],
+            total: $result['total'],
+            facets: $facets,
+            groupedResults: $result['groupedResults'],
+            page: $request->page,
+            limit: $request->limit,
+        );
+    }
+
+    /**
      * Execute a query and return only events without facets (faster for export).
      *
      * @return array<array<string, mixed>>
@@ -107,6 +162,7 @@ class EventQueryService
      *
      * @param array<QueryFilter> $filters
      * @param array<string>      $columns
+     * @param array<string>|null $facetAttributes Optional: limit facet computation to these attributes
      *
      * @return array{events: array<array<string, mixed>>, total: int, facetCounts: array<string, array<string, int>>, groupedResults: array<array<string, mixed>>}
      */
@@ -120,8 +176,20 @@ class EventQueryService
         ?string $groupBy,
         int $limit,
         int $offset,
+        ?array $facetAttributes = null,
     ): array {
-        $facetableAttributes = $this->attributeMetadata->getFacetableAttributes();
+        $allFacetableAttributes = $this->attributeMetadata->getFacetableAttributes();
+
+        // If facetAttributes specified, filter to only those; otherwise use all
+        if (null !== $facetAttributes) {
+            $facetableAttributes = array_intersect_key(
+                $allFacetableAttributes,
+                array_flip($facetAttributes)
+            );
+        } else {
+            $facetableAttributes = $allFacetableAttributes;
+        }
+
         $facetCounts = [];
         foreach ($facetableAttributes as $attr => $_) {
             $facetCounts[$attr] = [];
@@ -211,9 +279,11 @@ class EventQueryService
     /**
      * Determine which columns are needed for the query.
      *
+     * @param array<string>|null $facetAttributes Optional: limit to specific facet attributes
+     *
      * @return array<string>
      */
-    private function getRequiredColumns(QueryRequest $request): array
+    private function getRequiredColumns(QueryRequest $request, ?array $facetAttributes = null): array
     {
         $columns = ['timestamp', 'event_id', 'user_id', 'device_id'];
 
@@ -222,9 +292,15 @@ class EventQueryService
             $columns[] = $filter->attribute;
         }
 
-        // Add facetable attributes
-        foreach ($this->attributeMetadata->getFacetableAttributes() as $attr => $_) {
-            $columns[] = $attr;
+        // Add facetable attributes (either all or specific subset)
+        if (null !== $facetAttributes) {
+            foreach ($facetAttributes as $attr) {
+                $columns[] = $attr;
+            }
+        } else {
+            foreach ($this->attributeMetadata->getFacetableAttributes() as $attr => $_) {
+                $columns[] = $attr;
+            }
         }
 
         // Add groupBy attribute

@@ -215,6 +215,156 @@ class AsyncQueryResultStore
         $this->cache->deleteItem($this->getCacheKey($queryId));
     }
 
+    /**
+     * Initialize facet batch tracking for a query.
+     *
+     * @param array<string> $batchIds List of batch IDs that will be computed
+     */
+    public function initializeFacetBatches(string $queryId, array $batchIds): void
+    {
+        $state = $this->getQueryState($queryId);
+        if (null === $state) {
+            return;
+        }
+
+        $facetBatches = [];
+        foreach ($batchIds as $batchId) {
+            $facetBatches[$batchId] = [
+                'status' => 'pending',
+                'facets' => [],
+                'error' => null,
+            ];
+        }
+
+        $state['facetBatches'] = $facetBatches;
+        $state['updatedAt'] = time();
+
+        $this->saveState($queryId, $state, self::TTL_COMPLETED);
+    }
+
+    /**
+     * Append facets from a completed batch.
+     *
+     * @param array<array<string, mixed>> $facets Facet data to append
+     */
+    public function appendFacets(string $queryId, string $batchId, array $facets): void
+    {
+        $state = $this->getQueryState($queryId);
+        if (null === $state) {
+            return;
+        }
+
+        // Initialize facetBatches if not present
+        if (!isset($state['facetBatches'])) {
+            $state['facetBatches'] = [];
+        }
+
+        $state['facetBatches'][$batchId] = [
+            'status' => 'completed',
+            'facets' => $facets,
+            'error' => null,
+        ];
+        $state['updatedAt'] = time();
+
+        // Also append to the main result facets if result exists
+        if (isset($state['result']['facets'])) {
+            $state['result']['facets'] = array_merge($state['result']['facets'], $facets);
+        }
+
+        $this->saveState($queryId, $state, self::TTL_COMPLETED);
+    }
+
+    /**
+     * Mark a facet batch as failed.
+     */
+    public function markFacetBatchFailed(string $queryId, string $batchId, string $error): void
+    {
+        $state = $this->getQueryState($queryId);
+        if (null === $state) {
+            return;
+        }
+
+        if (!isset($state['facetBatches'])) {
+            $state['facetBatches'] = [];
+        }
+
+        $state['facetBatches'][$batchId] = [
+            'status' => 'failed',
+            'facets' => [],
+            'error' => $error,
+        ];
+        $state['updatedAt'] = time();
+
+        $this->saveState($queryId, $state, self::TTL_COMPLETED);
+    }
+
+    /**
+     * Get pending facet batches.
+     *
+     * @return array<string> List of pending batch IDs
+     */
+    public function getPendingFacetBatches(string $queryId): array
+    {
+        $state = $this->getQueryState($queryId);
+        if (null === $state || !isset($state['facetBatches'])) {
+            return [];
+        }
+
+        $pending = [];
+        foreach ($state['facetBatches'] as $batchId => $batch) {
+            if ('pending' === $batch['status']) {
+                $pending[] = $batchId;
+            }
+        }
+
+        return $pending;
+    }
+
+    /**
+     * Check if all facet batches are complete (either completed or failed).
+     */
+    public function areFacetBatchesComplete(string $queryId): bool
+    {
+        $state = $this->getQueryState($queryId);
+        if (null === $state) {
+            return true;
+        }
+
+        if (!isset($state['facetBatches']) || empty($state['facetBatches'])) {
+            return true;
+        }
+
+        foreach ($state['facetBatches'] as $batch) {
+            if ('pending' === $batch['status']) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get completed facet batches since last check.
+     *
+     * @return array<string, array<array<string, mixed>>> Map of batchId => facets
+     */
+    public function getCompletedFacetBatches(string $queryId): array
+    {
+        $state = $this->getQueryState($queryId);
+        if (null === $state || !isset($state['facetBatches'])) {
+            return [];
+        }
+
+        $completed = [];
+        foreach ($state['facetBatches'] as $batchId => $batch) {
+            if ('completed' === $batch['status'] && !empty($batch['facets'])) {
+                $completed[$batchId] = $batch['facets'];
+            }
+        }
+
+        return $completed;
+    }
+
     private function getCacheKey(string $queryId): string
     {
         return self::CACHE_PREFIX.$queryId;

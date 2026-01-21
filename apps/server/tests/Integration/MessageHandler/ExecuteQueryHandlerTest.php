@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Tests\Integration\MessageHandler;
 
 use App\Enum\QueryStatus;
+use App\Message\ComputeFacetBatch;
 use App\Message\ExecuteQuery;
 use App\MessageHandler\ExecuteQueryHandler;
 use App\Service\QueryBuilder\AsyncQueryResultStore;
 use App\Tests\Integration\AbstractIntegrationTestCase;
 use Symfony\Component\Uid\Uuid;
+use Zenstruck\Messenger\Test\InteractsWithMessenger;
 
 class ExecuteQueryHandlerTest extends AbstractIntegrationTestCase
 {
+    use InteractsWithMessenger;
+
     private ExecuteQueryHandler $handler;
     private AsyncQueryResultStore $resultStore;
 
@@ -243,6 +247,180 @@ class ExecuteQueryHandlerTest extends AbstractIntegrationTestCase
         foreach ($queryIds as $queryId) {
             $status = $this->resultStore->getStatus($queryId);
             $this->assertSame(QueryStatus::COMPLETED, $status);
+        }
+    }
+
+    public function testHandlerDispatchesDeferredFacetBatches(): void
+    {
+        $user = $this->createTestUser();
+        $project = $this->createTestProject($user);
+        $organizationId = $user->getDefaultOrganization()?->getPublicId()?->toRfc4122();
+
+        $queryId = Uuid::v7()->toRfc4122();
+        $queryRequest = [
+            'filters' => [],
+            'groupBy' => null,
+            'page' => 1,
+            'limit' => 50,
+            'projectId' => $project->getPublicId()->toRfc4122(),
+        ];
+
+        $this->resultStore->initializeQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        $message = new ExecuteQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        // Execute the handler
+        $this->handler->__invoke($message);
+
+        // Verify that facet batch messages were dispatched (4 batches)
+        $this->transport('async')
+            ->queue()
+            ->assertContains(ComputeFacetBatch::class, 4);
+    }
+
+    public function testHandlerInitializesFacetBatchTracking(): void
+    {
+        $user = $this->createTestUser();
+        $project = $this->createTestProject($user);
+        $organizationId = $user->getDefaultOrganization()?->getPublicId()?->toRfc4122();
+
+        $queryId = Uuid::v7()->toRfc4122();
+        $queryRequest = [
+            'filters' => [],
+            'groupBy' => null,
+            'page' => 1,
+            'limit' => 50,
+            'projectId' => $project->getPublicId()->toRfc4122(),
+        ];
+
+        $this->resultStore->initializeQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        $message = new ExecuteQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        // Execute the handler
+        $this->handler->__invoke($message);
+
+        // Verify facet batches were initialized
+        $state = $this->resultStore->getQueryState($queryId);
+        $this->assertArrayHasKey('facetBatches', $state);
+        $this->assertArrayHasKey('device', $state['facetBatches']);
+        $this->assertArrayHasKey('app', $state['facetBatches']);
+        $this->assertArrayHasKey('trace', $state['facetBatches']);
+        $this->assertArrayHasKey('user', $state['facetBatches']);
+    }
+
+    public function testHandlerReturnsPriorityFacetsOnly(): void
+    {
+        $user = $this->createTestUser();
+        $project = $this->createTestProject($user);
+        $organizationId = $user->getDefaultOrganization()?->getPublicId()?->toRfc4122();
+
+        $queryId = Uuid::v7()->toRfc4122();
+        $queryRequest = [
+            'filters' => [],
+            'groupBy' => null,
+            'page' => 1,
+            'limit' => 50,
+            'projectId' => $project->getPublicId()->toRfc4122(),
+        ];
+
+        $this->resultStore->initializeQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        $message = new ExecuteQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        // Execute the handler
+        $this->handler->__invoke($message);
+
+        // Verify result contains priority facets
+        $state = $this->resultStore->getQueryState($queryId);
+        $facetAttributes = array_column($state['result']['facets'], 'attribute');
+
+        // Priority facets should be present
+        $this->assertContains('event_type', $facetAttributes);
+        $this->assertContains('severity', $facetAttributes);
+        $this->assertContains('environment', $facetAttributes);
+        $this->assertContains('exception_type', $facetAttributes);
+    }
+
+    public function testFullFlowWithFacetBatchProcessing(): void
+    {
+        $user = $this->createTestUser();
+        $project = $this->createTestProject($user);
+        $organizationId = $user->getDefaultOrganization()?->getPublicId()?->toRfc4122();
+
+        $queryId = Uuid::v7()->toRfc4122();
+        $queryRequest = [
+            'filters' => [],
+            'groupBy' => null,
+            'page' => 1,
+            'limit' => 50,
+            'projectId' => $project->getPublicId()->toRfc4122(),
+        ];
+
+        $this->resultStore->initializeQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        $message = new ExecuteQuery(
+            $queryId,
+            $queryRequest,
+            (string) $user->getId(),
+            $organizationId,
+        );
+
+        // Execute the main query handler
+        $this->handler->__invoke($message);
+
+        // Verify query completed with priority facets
+        $this->assertSame(QueryStatus::COMPLETED, $this->resultStore->getStatus($queryId));
+
+        // Facet batches should be pending
+        $pending = $this->resultStore->getPendingFacetBatches($queryId);
+        $this->assertCount(4, $pending);
+
+        // Process all facet batch messages
+        $this->transport('async')->process(4);
+
+        // Now all facet batches should be complete
+        $this->assertTrue($this->resultStore->areFacetBatchesComplete($queryId));
+
+        // Verify all facet batches completed successfully
+        $state = $this->resultStore->getQueryState($queryId);
+        foreach (['device', 'app', 'trace', 'user'] as $batchId) {
+            $this->assertSame('completed', $state['facetBatches'][$batchId]['status']);
         }
     }
 }

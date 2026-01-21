@@ -8,6 +8,7 @@ use App\DTO\QueryBuilder\QueryRequest;
 use App\Message\ExecuteQuery;
 use App\Service\QueryBuilder\AsyncQueryResultStore;
 use App\Service\QueryBuilder\EventQueryService;
+use App\Service\QueryBuilder\FacetBatchDispatcher;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
@@ -17,8 +18,9 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 /**
  * Handler for executing queries asynchronously.
  *
- * Executes the query via EventQueryService and stores results
- * in AsyncQueryResultStore for SSE retrieval.
+ * Executes the query via EventQueryService with priority facets,
+ * stores results in AsyncQueryResultStore for SSE retrieval,
+ * then dispatches deferred facet batches for parallel computation.
  */
 #[AsMessageHandler]
 class ExecuteQueryHandler
@@ -26,6 +28,7 @@ class ExecuteQueryHandler
     public function __construct(
         private readonly EventQueryService $eventQueryService,
         private readonly AsyncQueryResultStore $resultStore,
+        private readonly FacetBatchDispatcher $facetBatchDispatcher,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -69,8 +72,8 @@ class ExecuteQueryHandler
                 return;
             }
 
-            // Execute the query
-            $result = $this->eventQueryService->executeQuery(
+            // Execute the query with priority facets only
+            $result = $this->eventQueryService->executeQueryWithPriorityFacets(
                 $queryRequest,
                 $message->organizationId,
             );
@@ -97,15 +100,25 @@ class ExecuteQueryHandler
                 'limit' => $result->limit,
             ];
 
-            // Store the result
+            // Store the result with priority facets
             $this->resultStore->storeResult($message->queryId, $resultData);
+
+            // Initialize facet batch tracking
+            $batchIds = array_keys(FacetBatchDispatcher::getBatches());
+            $this->resultStore->initializeFacetBatches($message->queryId, $batchIds);
+
+            // Dispatch deferred facet batches for parallel computation
+            $queryContext = $message->queryRequest;
+            $queryContext['organizationId'] = $message->organizationId;
+            $this->facetBatchDispatcher->dispatchDeferredFacets($message->queryId, $queryContext);
 
             $span->setStatus(StatusCode::STATUS_OK);
             $span->setAttribute('result.total', $result->total);
 
-            $this->logger->info('Async query completed successfully', [
+            $this->logger->info('Async query completed, deferred facets dispatched', [
                 'query_id' => $message->queryId,
                 'total_results' => $result->total,
+                'deferred_batches' => count($batchIds),
             ]);
         } catch (\Throwable $e) {
             $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());

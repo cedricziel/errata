@@ -221,4 +221,163 @@ class AsyncQueryResultStoreTest extends TestCase
         $this->assertFalse(QueryStatus::PENDING->isTerminal());
         $this->assertFalse(QueryStatus::IN_PROGRESS->isTerminal());
     }
+
+    // === Facet Batch Tests ===
+
+    public function testInitializeFacetBatchesSetsBatchesAsPending(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+
+        $batchIds = ['device', 'app', 'trace', 'user'];
+        $this->store->initializeFacetBatches($queryId, $batchIds);
+
+        $state = $this->store->getQueryState($queryId);
+        $this->assertArrayHasKey('facetBatches', $state);
+        $this->assertCount(4, $state['facetBatches']);
+
+        foreach ($batchIds as $batchId) {
+            $this->assertArrayHasKey($batchId, $state['facetBatches']);
+            $this->assertSame('pending', $state['facetBatches'][$batchId]['status']);
+            $this->assertEmpty($state['facetBatches'][$batchId]['facets']);
+            $this->assertNull($state['facetBatches'][$batchId]['error']);
+        }
+    }
+
+    public function testAppendFacetsMarksBatchAsCompleted(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+        $this->store->initializeFacetBatches($queryId, ['device', 'app']);
+
+        $facets = [
+            ['attribute' => 'device_model', 'label' => 'Device Model', 'values' => []],
+            ['attribute' => 'os_name', 'label' => 'OS Name', 'values' => []],
+        ];
+
+        $this->store->appendFacets($queryId, 'device', $facets);
+
+        $state = $this->store->getQueryState($queryId);
+        $this->assertSame('completed', $state['facetBatches']['device']['status']);
+        $this->assertSame($facets, $state['facetBatches']['device']['facets']);
+        $this->assertSame('pending', $state['facetBatches']['app']['status']);
+    }
+
+    public function testAppendFacetsAlsoAppendToMainResult(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+
+        $initialFacets = [
+            ['attribute' => 'event_type', 'label' => 'Event Type', 'values' => []],
+        ];
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => $initialFacets]);
+        $this->store->initializeFacetBatches($queryId, ['device']);
+
+        $batchFacets = [
+            ['attribute' => 'device_model', 'label' => 'Device Model', 'values' => []],
+        ];
+        $this->store->appendFacets($queryId, 'device', $batchFacets);
+
+        $state = $this->store->getQueryState($queryId);
+        $this->assertCount(2, $state['result']['facets']);
+        $this->assertSame('event_type', $state['result']['facets'][0]['attribute']);
+        $this->assertSame('device_model', $state['result']['facets'][1]['attribute']);
+    }
+
+    public function testMarkFacetBatchFailedStoresError(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+        $this->store->initializeFacetBatches($queryId, ['device', 'app']);
+
+        $this->store->markFacetBatchFailed($queryId, 'device', 'Something went wrong');
+
+        $state = $this->store->getQueryState($queryId);
+        $this->assertSame('failed', $state['facetBatches']['device']['status']);
+        $this->assertSame('Something went wrong', $state['facetBatches']['device']['error']);
+        $this->assertEmpty($state['facetBatches']['device']['facets']);
+    }
+
+    public function testGetPendingFacetBatchesReturnsOnlyPending(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+        $this->store->initializeFacetBatches($queryId, ['device', 'app', 'trace', 'user']);
+
+        // Complete some batches
+        $this->store->appendFacets($queryId, 'device', []);
+        $this->store->markFacetBatchFailed($queryId, 'app', 'error');
+
+        $pending = $this->store->getPendingFacetBatches($queryId);
+        $this->assertCount(2, $pending);
+        $this->assertContains('trace', $pending);
+        $this->assertContains('user', $pending);
+    }
+
+    public function testGetPendingFacetBatchesReturnsEmptyForNonexistentQuery(): void
+    {
+        $pending = $this->store->getPendingFacetBatches('nonexistent-query');
+        $this->assertEmpty($pending);
+    }
+
+    public function testAreFacetBatchesCompleteReturnsTrueWhenAllDone(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+        $this->store->initializeFacetBatches($queryId, ['device', 'app']);
+
+        $this->assertFalse($this->store->areFacetBatchesComplete($queryId));
+
+        $this->store->appendFacets($queryId, 'device', []);
+        $this->assertFalse($this->store->areFacetBatchesComplete($queryId));
+
+        $this->store->appendFacets($queryId, 'app', []);
+        $this->assertTrue($this->store->areFacetBatchesComplete($queryId));
+    }
+
+    public function testAreFacetBatchesCompleteReturnsTrueWhenMixedCompletedAndFailed(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+        $this->store->initializeFacetBatches($queryId, ['device', 'app']);
+
+        $this->store->appendFacets($queryId, 'device', []);
+        $this->store->markFacetBatchFailed($queryId, 'app', 'error');
+
+        $this->assertTrue($this->store->areFacetBatchesComplete($queryId));
+    }
+
+    public function testAreFacetBatchesCompleteReturnsTrueWhenNoBatches(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+
+        $this->assertTrue($this->store->areFacetBatchesComplete($queryId));
+    }
+
+    public function testGetCompletedFacetBatchesReturnsOnlyCompleted(): void
+    {
+        $queryId = 'test-query-123';
+        $this->store->initializeQuery($queryId, [], 'user-123');
+        $this->store->storeResult($queryId, ['events' => [], 'facets' => []]);
+        $this->store->initializeFacetBatches($queryId, ['device', 'app', 'trace']);
+
+        $deviceFacets = [['attribute' => 'device_model', 'values' => []]];
+        $this->store->appendFacets($queryId, 'device', $deviceFacets);
+        $this->store->markFacetBatchFailed($queryId, 'app', 'error');
+        // trace remains pending
+
+        $completed = $this->store->getCompletedFacetBatches($queryId);
+        $this->assertCount(1, $completed);
+        $this->assertArrayHasKey('device', $completed);
+        $this->assertSame($deviceFacets, $completed['device']);
+    }
 }
