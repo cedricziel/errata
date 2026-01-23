@@ -50,7 +50,7 @@ class ProjectController extends AbstractController
             if (empty($name)) {
                 $this->addFlash('error', 'Project name is required');
 
-                return $this->redirectToRoute('project_new');
+                return $this->redirectToRoute('project_new', [], Response::HTTP_SEE_OTHER);
             }
 
             $project = new Project();
@@ -66,7 +66,7 @@ class ProjectController extends AbstractController
             if (null === $organization) {
                 $this->addFlash('error', 'You must belong to an organization to create a project');
 
-                return $this->redirectToRoute('project_new');
+                return $this->redirectToRoute('project_new', [], Response::HTTP_SEE_OTHER);
             }
             $project->setOrganization($organization);
 
@@ -86,7 +86,7 @@ class ProjectController extends AbstractController
             $this->addFlash('success', 'Project created successfully');
             $this->addFlash('api_key', $keyData['plain']);
 
-            return $this->redirectToRoute('project_show', ['publicId' => $project->getPublicId()->toRfc4122()]);
+            return $this->redirectToRoute('project_show', ['publicId' => $project->getPublicId()->toRfc4122()], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('project/new.html.twig');
@@ -142,7 +142,7 @@ class ProjectController extends AbstractController
             if (empty($name)) {
                 $this->addFlash('error', 'Project name is required');
 
-                return $this->redirectToRoute('project_edit', ['publicId' => $publicId]);
+                return $this->redirectToRoute('project_edit', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
             }
 
             $project->setName($name);
@@ -154,7 +154,7 @@ class ProjectController extends AbstractController
 
             $this->addFlash('success', 'Project updated successfully');
 
-            return $this->redirectToRoute('project_show', ['publicId' => $publicId]);
+            return $this->redirectToRoute('project_show', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('project/edit.html.twig', [
@@ -221,7 +221,7 @@ class ProjectController extends AbstractController
         $this->addFlash('success', 'API key created successfully');
         $this->addFlash('api_key', $keyData['plain']);
 
-        return $this->redirectToRoute('project_show', ['publicId' => $publicId]);
+        return $this->redirectToRoute('project_show', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{publicId}/keys/{keyId}/revoke', name: 'revoke_key', methods: ['POST'])]
@@ -254,6 +254,6 @@ class ProjectController extends AbstractController
 
         $this->addFlash('success', 'API key revoked successfully');
 
-        return $this->redirectToRoute('project_show', ['publicId' => $publicId]);
+        return $this->redirectToRoute('project_show', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
     }
 }

@@ -61,27 +61,21 @@ class QueryBuilderController extends AbstractController
         // Resolve the global timeframe
         $timeframe = $this->timeframeService->resolveTimeframe($request);
 
-        // Build the query request
+        // Build the query request (for form state, not for execution)
         $queryRequest = $this->buildQueryRequestFromParams($request);
         $queryRequest->startDate = $timeframe->from;
         $queryRequest->endDate = $timeframe->to;
         $queryRequest->projectId = $selectedProject?->getPublicId()?->toRfc4122();
 
-        // Execute the query
-        $result = $this->eventQueryService->executeQuery(
-            $queryRequest,
-            $user?->getDefaultOrganization()?->getPublicId()?->toRfc4122(),
-        );
-
         // Get filter builder metadata
         $filterBuilderData = $this->attributeMetadataService->getFilterBuilderData();
         $groupableAttributes = $this->attributeMetadataService->getGroupableAttributes();
 
+        // Don't execute query synchronously - let JS do it async
         return $this->render('query_builder/index.html.twig', [
             'projects' => $projects,
             'selectedProject' => $selectedProject,
             'queryRequest' => $queryRequest,
-            'result' => $result,
             'filterBuilderData' => $filterBuilderData,
             'groupableAttributes' => $groupableAttributes,
             'timeframe' => $timeframe,

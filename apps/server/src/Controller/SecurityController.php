@@ -97,7 +97,7 @@ class SecurityController extends AbstractController
 
                 $this->addFlash('success', 'Account created successfully. Please log in.');
 
-                return $this->redirectToRoute('app_login');
+                return $this->redirectToRoute('app_login', [], Response::HTTP_SEE_OTHER);
             }
 
             foreach ($errors as $error) {

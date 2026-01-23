@@ -67,9 +67,9 @@ class TimeframeController extends AbstractController
                 }
             }
 
-            return $this->redirect($referer);
+            return $this->redirect($referer, Response::HTTP_SEE_OTHER);
         }
 
-        return $this->redirectToRoute('dashboard');
+        return $this->redirectToRoute('dashboard', [], Response::HTTP_SEE_OTHER);
     }
 }

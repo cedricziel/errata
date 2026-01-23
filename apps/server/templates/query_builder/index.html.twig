@@ -115,8 +115,16 @@
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
                     <h2 class="text-sm font-medium text-gray-900">Facets</h2>
                 </div>
-                <div class="divide-y divide-gray-200">
-                    {% include 'query_builder/_facet_panel.html.twig' with { facets: result.facets } %}
+                <div class="divide-y divide-gray-200" data-query-builder-target="facetContent">
+                    {# Loading state - facets will be rendered by JS #}
+                    <div class="px-4 py-8 text-center">
+                        <div class="animate-pulse space-y-4">
+                            <div class="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                            <div class="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                            <div class="h-4 bg-gray-200 rounded w-2/3 mx-auto"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-3">Loading facets...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -124,7 +132,22 @@
         {# Results Area #}
         <div class="flex-1 min-w-0">
             <turbo-frame id="query-results" data-query-builder-target="results">
-                {% include 'query_builder/_results.html.twig' %}
+                {# Loading state - results will be rendered by JS #}
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                        <h2 class="text-sm font-medium text-gray-900">Results</h2>
+                    </div>
+                    <div class="px-4 py-12 text-center" data-query-builder-target="initialLoading">
+                        <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                        <h3 class="text-sm font-medium text-gray-900">Running query...</h3>
+                        <p class="mt-1 text-sm text-gray-500">Please wait while your query is being processed.</p>
+                        <div class="w-48 h-2 bg-gray-200 rounded-full mx-auto mt-4">
+                            <div class="h-2 bg-indigo-500 rounded-full transition-all"
+                                 data-query-builder-target="inlineProgressBar"
+                                 style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
             </turbo-frame>
         </div>
     </div>

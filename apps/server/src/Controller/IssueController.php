@@ -166,7 +166,7 @@ class IssueController extends AbstractController
         if (!in_array($status, [Issue::STATUS_OPEN, Issue::STATUS_RESOLVED, Issue::STATUS_IGNORED], true)) {
             $this->addFlash('error', 'Invalid status');
 
-            return $this->redirectToRoute('issue_show', ['publicId' => $publicId]);
+            return $this->redirectToRoute('issue_show', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         $issue->setStatus($status);
@@ -174,6 +174,6 @@ class IssueController extends AbstractController
 
         $this->addFlash('success', 'Issue status updated to '.ucfirst($status));
 
-        return $this->redirectToRoute('issue_show', ['publicId' => $publicId]);
+        return $this->redirectToRoute('issue_show', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
     }
 }

@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['form', 'filterContainer', 'projectSelect', 'projectInput', 'groupBy', 'facetPanel', 'results', 'loadingOverlay', 'progressBar', 'cancelButton', 'errorMessage'];
+    static targets = ['form', 'filterContainer', 'projectSelect', 'projectInput', 'groupBy', 'facetPanel', 'facetContent', 'results', 'loadingOverlay', 'progressBar', 'cancelButton', 'errorMessage', 'initialLoading', 'inlineProgressBar'];
     static values = {
         resultsUrl: String,
         facetsUrl: String,
@@ -22,6 +22,12 @@ export default class extends Controller {
 
         // Listen for timeframe changes from the timeframe picker
         document.addEventListener('timeframe:changed', this.handleTimeframeChange.bind(this));
+
+        // Auto-submit query on page load if async is enabled
+        if (this.asyncEnabledValue && this.hasSubmitUrlValue) {
+            // Small delay to ensure DOM is fully ready
+            setTimeout(() => this.submitQueryAsync(), 100);
+        }
     }
 
     handleTimeframeChange(event) {
@@ -200,12 +206,17 @@ export default class extends Controller {
             this.progressBarTarget.style.width = `${progress}%`;
             this.progressBarTarget.setAttribute('aria-valuenow', progress);
         }
+        // Also update inline progress bar if present
+        if (this.hasInlineProgressBarTarget) {
+            this.inlineProgressBarTarget.style.width = `${progress}%`;
+        }
     }
 
     // Handle query result
     handleResult(data) {
         this.hideLoading();
         this.renderResults(data);
+        this.renderFacets(data.facets || []);
     }
 
     // Render results in the results target
@@ -259,6 +270,89 @@ export default class extends Controller {
         html += `</div>`;
 
         this.resultsTarget.innerHTML = html;
+    }
+
+    // Render facets in the facet panel
+    renderFacets(facets) {
+        if (!this.hasFacetContentTarget) {
+            return;
+        }
+
+        if (!facets || facets.length === 0) {
+            this.facetContentTarget.innerHTML = `
+                <div class="px-4 py-3 text-sm text-gray-500 italic">
+                    No facets available
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        for (const facet of facets) {
+            html += this.renderFacetGroup(facet);
+        }
+        this.facetContentTarget.innerHTML = html;
+    }
+
+    // Render a single facet group
+    renderFacetGroup(facet) {
+        const values = facet.values || [];
+        const isExpanded = facet.expanded !== false; // Default to expanded
+
+        const valuesHtml = values.map(v => {
+            const displayValue = v.value || '(empty)';
+            const escapedValue = this.escapeHtml(v.value || '');
+            const escapedDisplay = this.escapeHtml(displayValue);
+
+            return `
+                <label class="flex items-center justify-between cursor-pointer py-1">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox"
+                               name="facet_${this.escapeHtml(facet.attribute)}[]"
+                               value="${escapedValue}"
+                               ${v.selected ? 'checked' : ''}
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                               data-action="change->query-builder#onFacetChange"
+                               data-facet-attribute="${this.escapeHtml(facet.attribute)}">
+                        <span class="text-sm text-gray-700 truncate">${escapedDisplay}</span>
+                    </div>
+                    <span class="text-xs text-gray-500 ml-2">${v.count}</span>
+                </label>
+            `;
+        }).join('');
+
+        const moreCount = (facet.totalCount || 0) - values.length;
+        const moreHtml = moreCount > 0 ? `
+            <div class="pt-1 text-xs text-gray-400">
+                +${moreCount} more
+            </div>` : '';
+
+        return `
+            <div class="facet-group" data-facet="${this.escapeHtml(facet.attribute)}" data-facet-type="multi">
+                <button type="button"
+                        class="w-full px-4 py-2 flex items-center justify-between text-left text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+                        data-action="click->query-builder#toggleFacet"
+                        data-expanded="${isExpanded}">
+                    <span>${this.escapeHtml(facet.label || facet.attribute)}</span>
+                    <svg class="h-4 w-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div class="facet-values px-4 pb-3 space-y-1 ${isExpanded ? '' : 'hidden'}">
+                    ${valuesHtml}
+                    ${moreHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // Escape HTML to prevent XSS
+    escapeHtml(text) {
+        if (text === null || text === undefined) {
+            return '';
+        }
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
     }
 
     // Cancel the running query

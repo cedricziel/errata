@@ -51,7 +51,7 @@ class OrganizationController extends AbstractController
         $this->organizationSwitcher->setCurrentOrganization($organization);
         $this->addFlash('success', sprintf('Switched to %s', $organization->getName()));
 
-        return $this->redirectToRoute('dashboard');
+        return $this->redirectToRoute('dashboard', [], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{publicId}', name: 'show')]
@@ -84,7 +84,7 @@ class OrganizationController extends AbstractController
             if (empty($name)) {
                 $this->addFlash('error', 'Organization name is required');
 
-                return $this->redirectToRoute('organization_settings', ['publicId' => $publicId]);
+                return $this->redirectToRoute('organization_settings', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
             }
 
             $organization->setName($name);
@@ -93,7 +93,7 @@ class OrganizationController extends AbstractController
 
             $this->addFlash('success', 'Organization updated successfully');
 
-            return $this->redirectToRoute('organization_show', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_show', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('organization/settings.html.twig', [
@@ -133,7 +133,7 @@ class OrganizationController extends AbstractController
         if (empty($email)) {
             $this->addFlash('error', 'Email is required');
 
-            return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         // Validate role
@@ -148,7 +148,7 @@ class OrganizationController extends AbstractController
         if (OrganizationMembership::ROLE_ADMIN === $role && !$currentMembership?->isOwner()) {
             $this->addFlash('error', 'Only owners can add admins');
 
-            return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         $invitedUser = $this->userRepository->findByEmail($email);
@@ -156,14 +156,14 @@ class OrganizationController extends AbstractController
         if (null === $invitedUser) {
             $this->addFlash('error', 'No user found with that email address');
 
-            return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         // Check if already a member
         if ($invitedUser->isMemberOf($organization)) {
             $this->addFlash('error', 'User is already a member of this organization');
 
-            return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         $membership = new OrganizationMembership();
@@ -175,7 +175,7 @@ class OrganizationController extends AbstractController
 
         $this->addFlash('success', sprintf('Added %s to the organization', $invitedUser->getEmail()));
 
-        return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+        return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{publicId}/members/{memberId}/role', name: 'change_member_role', methods: ['POST'])]
@@ -198,7 +198,7 @@ class OrganizationController extends AbstractController
         if (!in_array($newRole, [OrganizationMembership::ROLE_MEMBER, OrganizationMembership::ROLE_ADMIN, OrganizationMembership::ROLE_OWNER], true)) {
             $this->addFlash('error', 'Invalid role');
 
-            return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         // Prevent demoting the last owner
@@ -207,7 +207,7 @@ class OrganizationController extends AbstractController
             if (1 === count($owners)) {
                 $this->addFlash('error', 'Cannot demote the last owner');
 
-                return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+                return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
             }
         }
 
@@ -216,7 +216,7 @@ class OrganizationController extends AbstractController
 
         $this->addFlash('success', sprintf('Updated role for %s', $membership->getUser()->getEmail()));
 
-        return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+        return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{publicId}/members/{memberId}/remove', name: 'remove_member', methods: ['POST'])]
@@ -242,14 +242,14 @@ class OrganizationController extends AbstractController
         if ($membership->getUser() === $currentUser) {
             $this->addFlash('error', 'You cannot remove yourself from the organization');
 
-            return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         // Admins can only remove members, not other admins or owners
         if (!$currentMembership?->isOwner() && !$membership->isMember()) {
             $this->addFlash('error', 'You can only remove members with member role');
 
-            return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+            return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
         }
 
         // Prevent removing the last owner
@@ -258,7 +258,7 @@ class OrganizationController extends AbstractController
             if (1 === count($owners)) {
                 $this->addFlash('error', 'Cannot remove the last owner');
 
-                return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+                return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
             }
         }
 
@@ -267,7 +267,7 @@ class OrganizationController extends AbstractController
 
         $this->addFlash('success', sprintf('Removed %s from the organization', $email));
 
-        return $this->redirectToRoute('organization_members', ['publicId' => $publicId]);
+        return $this->redirectToRoute('organization_members', ['publicId' => $publicId], Response::HTTP_SEE_OTHER);
     }
 
     private function getOrganizationWithAccess(string $publicId, bool $requireOwner = false, bool $requireAdmin = false): Organization
