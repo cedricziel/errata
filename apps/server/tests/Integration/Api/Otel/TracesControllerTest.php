@@ -79,11 +79,11 @@ class TracesControllerTest extends AbstractIntegrationTestCase
                 ->withBody($protobufData))
             ->assertStatus(200);
 
-        $this->transport('async')
+        $this->transport('async_events')
             ->queue()
             ->assertContains(ProcessEvent::class, 1);
 
-        $messages = $this->transport('async')->queue()->messages(ProcessEvent::class);
+        $messages = $this->transport('async_events')->queue()->messages(ProcessEvent::class);
         $this->assertSame('span', $messages[0]->eventData['event_type']);
         $this->assertSame('5b8efff798038103d269b633813fc60c', $messages[0]->eventData['trace_id']);
     }
@@ -101,11 +101,11 @@ class TracesControllerTest extends AbstractIntegrationTestCase
                 ->withHeader('X-Errata-Key', $apiKeyData['plainKey']))
             ->assertStatus(200);
 
-        $this->transport('async')
+        $this->transport('async_events')
             ->queue()
             ->assertContains(ProcessEvent::class, 1);
 
-        $messages = $this->transport('async')->queue()->messages(ProcessEvent::class);
+        $messages = $this->transport('async_events')->queue()->messages(ProcessEvent::class);
         $this->assertSame('span', $messages[0]->eventData['event_type']);
         $this->assertSame('5b8efff798038103d269b633813fc60c', $messages[0]->eventData['trace_id']);
     }

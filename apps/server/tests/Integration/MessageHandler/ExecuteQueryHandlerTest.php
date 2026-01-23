@@ -283,7 +283,7 @@ class ExecuteQueryHandlerTest extends AbstractIntegrationTestCase
         $this->handler->__invoke($message);
 
         // Verify that facet batch messages were dispatched (4 batches)
-        $this->transport('async')
+        $this->transport('async_query')
             ->queue()
             ->assertContains(ComputeFacetBatch::class, 4);
     }
@@ -412,7 +412,7 @@ class ExecuteQueryHandlerTest extends AbstractIntegrationTestCase
         $this->assertCount(4, $pending);
 
         // Process all facet batch messages
-        $this->transport('async')->process(4);
+        $this->transport('async_query')->process(4);
 
         // Now all facet batches should be complete
         $this->assertTrue($this->resultStore->areFacetBatchesComplete($queryId));

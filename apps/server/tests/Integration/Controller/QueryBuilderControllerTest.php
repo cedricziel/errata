@@ -353,7 +353,7 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             });
 
         // 2. Verify message was queued
-        $this->transport('async')
+        $this->transport('async_query')
             ->queue()
             ->assertContains(ExecuteQuery::class, 1);
 
@@ -368,7 +368,7 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             });
 
         // 4. Process the queued message
-        $this->transport('async')->process();
+        $this->transport('async_query')->process();
 
         // 5. Check status after processing (should be completed)
         $this->browser()
@@ -467,15 +467,15 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             });
 
         // 2. Verify ExecuteQuery message was queued
-        $this->transport('async')
+        $this->transport('async_query')
             ->queue()
             ->assertContains(ExecuteQuery::class, 1);
 
         // 3. Process the ExecuteQuery message
-        $this->transport('async')->process(1);
+        $this->transport('async_query')->process(1);
 
         // 4. Verify ComputeFacetBatch messages were dispatched (4 batches)
-        $this->transport('async')
+        $this->transport('async_query')
             ->queue()
             ->assertContains(ComputeFacetBatch::class, 4);
 
@@ -499,7 +499,7 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
         $this->assertCount(4, $state['facetBatches']);
 
         // 7. Process all facet batch messages
-        $this->transport('async')->process(4);
+        $this->transport('async_query')->process(4);
 
         // 8. Verify all batches completed
         $state = $resultStore->getQueryState($queryId);
@@ -525,10 +525,10 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             ->assertSuccessful();
 
         // Process ExecuteQuery
-        $this->transport('async')->process(1);
+        $this->transport('async_query')->process(1);
 
         // Check that all 4 facet batches were dispatched
-        $queue = $this->transport('async')->queue();
+        $queue = $this->transport('async_query')->queue();
 
         // Extract batch IDs from queued messages
         $batchIds = [];
@@ -574,10 +574,10 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             ->assertSuccessful();
 
         // Process the ExecuteQuery (should detect cancellation)
-        $this->transport('async')->process(1);
+        $this->transport('async_query')->process(1);
 
         // Verify no facet batches were dispatched
-        $this->transport('async')
+        $this->transport('async_query')
             ->queue()
             ->assertNotContains(ComputeFacetBatch::class);
     }
@@ -605,14 +605,14 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             });
 
         // Process ExecuteQuery
-        $this->transport('async')->process(1);
+        $this->transport('async_query')->process(1);
 
         /** @var \App\Service\QueryBuilder\AsyncQueryResultStore $resultStore */
         $resultStore = static::getContainer()->get(\App\Service\QueryBuilder\AsyncQueryResultStore::class);
 
         // Process batches one at a time and verify progressive completion
         for ($i = 1; $i <= 4; ++$i) {
-            $this->transport('async')->process(1);
+            $this->transport('async_query')->process(1);
 
             $completedCount = 4 - count($resultStore->getPendingFacetBatches($queryId));
             $this->assertSame($i, $completedCount);
@@ -645,7 +645,7 @@ class QueryBuilderControllerTest extends AbstractIntegrationTestCase
             });
 
         // Process ExecuteQuery
-        $this->transport('async')->process(1);
+        $this->transport('async_query')->process(1);
 
         // Status should be completed (even with pending facet batches)
         $this->browser()

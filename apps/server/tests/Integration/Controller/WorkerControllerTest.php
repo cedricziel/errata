@@ -108,7 +108,7 @@ class WorkerControllerTest extends AbstractIntegrationTestCase
             ->assertStatus(202);
 
         // Verify message is queued
-        $this->transport('async')
+        $this->transport('async_events')
             ->queue()
             ->assertContains(ProcessEvent::class, 1);
 
@@ -125,7 +125,7 @@ class WorkerControllerTest extends AbstractIntegrationTestCase
     public function testConsumeReturnsZeroProcessedWhenQueueEmpty(): void
     {
         // Ensure queue is empty
-        $this->transport('async')->queue()->assertEmpty();
+        $this->transport('async_events')->queue()->assertEmpty();
 
         $this->browser()
             ->post('/api/worker/consume', HttpOptions::create()

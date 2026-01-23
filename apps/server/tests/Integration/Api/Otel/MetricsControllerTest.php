@@ -70,11 +70,11 @@ class MetricsControllerTest extends AbstractIntegrationTestCase
                 ->withBody($protobufData))
             ->assertStatus(200);
 
-        $this->transport('async')
+        $this->transport('async_events')
             ->queue()
             ->assertContains(ProcessEvent::class, 1);
 
-        $messages = $this->transport('async')->queue()->messages(ProcessEvent::class);
+        $messages = $this->transport('async_events')->queue()->messages(ProcessEvent::class);
         $this->assertSame('metric', $messages[0]->eventData['event_type']);
         $this->assertSame('http.request.duration', $messages[0]->eventData['metric_name']);
     }
@@ -92,11 +92,11 @@ class MetricsControllerTest extends AbstractIntegrationTestCase
                 ->withHeader('X-Errata-Key', $apiKeyData['plainKey']))
             ->assertStatus(200);
 
-        $this->transport('async')
+        $this->transport('async_events')
             ->queue()
             ->assertContains(ProcessEvent::class, 1);
 
-        $messages = $this->transport('async')->queue()->messages(ProcessEvent::class);
+        $messages = $this->transport('async_events')->queue()->messages(ProcessEvent::class);
         $this->assertSame('metric', $messages[0]->eventData['event_type']);
         $this->assertSame('http.request.duration', $messages[0]->eventData['metric_name']);
         $this->assertSame(150.5, $messages[0]->eventData['metric_value']);
