@@ -13,6 +13,24 @@ jobs:
       run:
         working-directory: apps/server
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: errata
+          POSTGRES_PASSWORD: errata
+          POSTGRES_DB: errata
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://errata:errata@localhost:5432/errata?charset=utf8
+
     steps:
       - uses: actions/checkout@v6
 
@@ -20,7 +38,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, pdo_pgsql, opentelemetry
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql, opentelemetry
 
       - name: Get Composer cache directory
         id: composer-cache
@@ -44,8 +62,7 @@ jobs:
 
       - name: Setup test database
         run: |
-          mkdir -p var/data
-          touch var/data/errata.db
+          php bin/console doctrine:database:create --env=test --if-not-exists
           php bin/console doctrine:migrations:migrate --env=test --no-interaction
 
       - name: Run tests
