@@ -17,6 +17,11 @@ parameters:
     otel.frontend.service_name: '%env(string:OTEL_FRONTEND_SERVICE_NAME)%'
     otel.frontend.service_version: '%env(string:OTEL_FRONTEND_SERVICE_VERSION)%'
 
+    # OpenTelemetry ingestion configuration
+    # Comma-separated list of service names to ignore (prevents feedback loops when dogfooding)
+    otel.ignored_services.default: ''
+    otel.ignored_services: '%env(csv:default:otel.ignored_services.default:OTEL_IGNORED_SERVICES)%'
+
     # Storage configuration (local or S3/MinIO)
     # Default values for env var fallback
     storage.type.default: 'local'

@@ -6,11 +6,13 @@ namespace App\Controller\Api\Otel;
 
 use App\Message\ProcessEvent;
 use App\Security\ApiKeyAuthenticator;
+use App\Service\Otel\ProtobufHelper;
 use App\Service\Otel\TraceMapper;
 use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceRequest;
 use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceResponse;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,10 +25,15 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/v1')]
 class TracesController extends AbstractController
 {
+    /**
+     * @param array<string> $ignoredServices Service names to ignore (prevents feedback loops)
+     */
     public function __construct(
         private readonly MessageBusInterface $messageBus,
         private readonly TraceMapper $traceMapper,
         private readonly LoggerInterface $logger,
+        #[Autowire('%otel.ignored_services%')]
+        private readonly array $ignoredServices = [],
     ) {
     }
 
@@ -106,7 +113,11 @@ class TracesController extends AbstractController
         $projectId = $project->getPublicId()->toRfc4122();
         $environment = $apiKey->getEnvironment();
 
-        foreach ($this->traceMapper->mapToEvents($traceRequest) as $eventData) {
+        // Filter out traces from ignored services to prevent feedback loops
+        // when dogfooding (sending our own traces to ourselves)
+        $filteredRequest = $this->filterIgnoredServices($traceRequest);
+
+        foreach ($this->traceMapper->mapToEvents($filteredRequest) as $eventData) {
             $this->messageBus->dispatch(new ProcessEvent(
                 eventData: $eventData,
                 projectId: $projectId,
@@ -165,5 +176,37 @@ class TracesController extends AbstractController
         json_decode($content, true);
 
         return JSON_ERROR_NONE === json_last_error();
+    }
+
+    /**
+     * Filter out resourceSpans from ignored services to prevent feedback loops.
+     */
+    private function filterIgnoredServices(ExportTraceServiceRequest $request): ExportTraceServiceRequest
+    {
+        if ([] === $this->ignoredServices) {
+            return $request;
+        }
+
+        $filtered = new ExportTraceServiceRequest();
+
+        foreach ($request->getResourceSpans() as $resourceSpans) {
+            $resource = $resourceSpans->getResource();
+            if (null === $resource) {
+                $filtered->getResourceSpans()[] = $resourceSpans;
+                continue;
+            }
+
+            $serviceName = ProtobufHelper::getAttribute($resource->getAttributes(), 'service.name');
+            if (null !== $serviceName && in_array((string) $serviceName, $this->ignoredServices, true)) {
+                $this->logger->debug('OTLP traces: Ignoring traces from service', [
+                    'service_name' => $serviceName,
+                ]);
+                continue;
+            }
+
+            $filtered->getResourceSpans()[] = $resourceSpans;
+        }
+
+        return $filtered;
     }
 }
