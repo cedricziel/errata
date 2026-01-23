@@ -138,12 +138,28 @@ class ParquetReaderService
 
         try {
             $config = $this->flowConfigFactory->createConfig();
-            $glob = $this->flowConfigFactory->buildGlobPattern($organizationId, $projectId, null, $from, $to);
+
+            // Always use wildcards for the glob pattern to ensure Flow-PHP finds files.
+            // Flow-PHP doesn't properly handle mixed glob patterns (some specific, some wildcard).
+            // We rely on partition filters for exact matching instead.
+            $glob = $this->flowConfigFactory->buildGlobPattern(null, null, null, $from, $to);
+
+            // Ensure partition columns are included for filtering, even if not requested
+            $columnsToRead = $columns;
+            if (null !== $organizationId && !in_array('organization_id', $columnsToRead, true)) {
+                $columnsToRead[] = 'organization_id';
+            }
+            if (null !== $projectId && !in_array('project_id', $columnsToRead, true)) {
+                $columnsToRead[] = 'project_id';
+            }
+            if ((null !== $from || null !== $to) && !in_array('timestamp', $columnsToRead, true)) {
+                $columnsToRead[] = 'timestamp';
+            }
 
             $df = data_frame($config)
-                ->read(from_parquet($glob, columns: $columns));
+                ->read(from_parquet($glob, columns: $columnsToRead));
 
-            // Apply partition filters
+            // Apply partition filters to narrow down results
             $partitionFilter = $this->buildPartitionFilter($organizationId, $projectId, null, $from, $to);
             if (null !== $partitionFilter) {
                 $df = $df->filter($partitionFilter);

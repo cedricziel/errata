@@ -247,13 +247,30 @@ class QueryBuilderController extends AbstractController
             $selectedProject = $this->projectRepository->findByPublicId($selectedProjectId);
         }
 
-        // Resolve the global timeframe
-        $timeframe = $this->timeframeService->resolveTimeframe($request);
-
-        // Build the query request
+        // Build the query request (handles JSON body)
         $queryRequest = $this->buildQueryRequestFromRequest($request);
-        $queryRequest->startDate = $timeframe->from;
-        $queryRequest->endDate = $timeframe->to;
+
+        // Try to get timeframe from POST body first, fall back to session
+        $data = json_decode($request->getContent(), true) ?? [];
+
+        if (!empty($data['startDate']) && !empty($data['endDate'])) {
+            // Use explicitly passed timeframe from POST body
+            try {
+                $queryRequest->startDate = new \DateTimeImmutable($data['startDate']);
+                $queryRequest->endDate = new \DateTimeImmutable($data['endDate']);
+            } catch (\Exception $e) {
+                // Invalid date format, fall back to session
+                $timeframe = $this->timeframeService->resolveTimeframe($request);
+                $queryRequest->startDate = $timeframe->from;
+                $queryRequest->endDate = $timeframe->to;
+            }
+        } else {
+            // Fall back to session-based timeframe
+            $timeframe = $this->timeframeService->resolveTimeframe($request);
+            $queryRequest->startDate = $timeframe->from;
+            $queryRequest->endDate = $timeframe->to;
+        }
+
         $queryRequest->projectId = $selectedProject?->getPublicId()?->toRfc4122();
 
         // Generate unique query ID

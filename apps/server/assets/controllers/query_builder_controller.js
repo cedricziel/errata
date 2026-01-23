@@ -6,7 +6,9 @@ export default class extends Controller {
         resultsUrl: String,
         facetsUrl: String,
         submitUrl: String,
-        asyncEnabled: { type: Boolean, default: false }
+        asyncEnabled: { type: Boolean, default: false },
+        timeframeFrom: String,
+        timeframeTo: String
     };
 
     filterCount = 0;
@@ -17,10 +19,21 @@ export default class extends Controller {
         // Initialize filter count based on existing filters
         const filterRows = this.filterContainerTarget.querySelectorAll('.filter-row:not(.new-filter-row)');
         this.filterCount = filterRows.length;
+
+        // Listen for timeframe changes from the timeframe picker
+        document.addEventListener('timeframe:changed', this.handleTimeframeChange.bind(this));
+    }
+
+    handleTimeframeChange(event) {
+        if (event.detail) {
+            this.timeframeFromValue = event.detail.from;
+            this.timeframeToValue = event.detail.to;
+        }
     }
 
     disconnect() {
         this.closeEventSource();
+        document.removeEventListener('timeframe:changed', this.handleTimeframeChange.bind(this));
     }
 
     // Submit the query form
@@ -118,6 +131,8 @@ export default class extends Controller {
             page: parseInt(formData.get('page') || '1', 10),
             limit: parseInt(formData.get('limit') || '50', 10),
             project: formData.get('project'),
+            startDate: this.timeframeFromValue || null,
+            endDate: this.timeframeToValue || null,
         };
     }
 

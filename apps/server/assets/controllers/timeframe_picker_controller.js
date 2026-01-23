@@ -43,17 +43,31 @@ export default class extends Controller {
         const form = event.target;
 
         try {
+            const formData = new FormData(form);
             const response = await fetch(form.action, {
                 method: 'POST',
-                body: new FormData(form),
+                body: formData,
                 headers: {
                     'Accept': 'text/html'
                 }
             });
 
             if (response.ok || response.redirected) {
-                // Close menu and refresh page via Turbo
+                // Close menu
                 this.menuTarget.classList.add('hidden');
+
+                // Dispatch timeframe changed event for any listening controllers
+                // Extract timeframe from form data for custom ranges, or use preset
+                const customFrom = formData.get('from');
+                const customTo = formData.get('to');
+
+                if (customFrom && customTo) {
+                    document.dispatchEvent(new CustomEvent('timeframe:changed', {
+                        detail: { from: customFrom, to: customTo }
+                    }));
+                }
+
+                // Refresh page via Turbo to get updated data attributes
                 Turbo.visit(window.location.href, { action: 'replace' });
             }
         } catch (error) {

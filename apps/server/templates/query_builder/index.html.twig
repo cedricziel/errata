@@ -8,7 +8,9 @@
      data-query-builder-results-url-value="{{ path('query_results') }}"
      data-query-builder-facets-url-value="{{ path('query_facets') }}"
      data-query-builder-submit-url-value="{{ path('query_submit') }}"
-     data-query-builder-async-enabled-value="true">
+     data-query-builder-async-enabled-value="true"
+     data-query-builder-timeframe-from-value="{{ timeframe.from|date('c') }}"
+     data-query-builder-timeframe-to-value="{{ timeframe.to|date('c') }}">
 
     {# Loading Overlay #}
     <div data-query-builder-target="loadingOverlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
