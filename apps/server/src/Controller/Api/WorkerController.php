@@ -30,6 +30,7 @@ class WorkerController extends AbstractController
 {
     private const DEFAULT_LIMIT = 50;
     private const DEFAULT_TIME_LIMIT = 25;
+    private const VALID_TRANSPORTS = ['async', 'async_query', 'async_events'];
 
     public function __construct(
         #[Autowire('%env(WORKER_SECRET)%')]
@@ -42,11 +43,12 @@ class WorkerController extends AbstractController
     }
 
     /**
-     * Consume messages from the async queue.
+     * Consume messages from a queue.
      *
      * Authentication is done via secret token (header or query parameter).
      *
      * Query parameters:
+     * - transport: Transport to consume from (async, async_query, async_events). Default: async
      * - limit: Maximum number of messages to process (default: 50)
      * - time_limit: Maximum time in seconds to run (default: 25)
      */
@@ -59,6 +61,14 @@ class WorkerController extends AbstractController
 
         if ($secret !== $this->workerSecret) {
             return new JsonResponse(['error' => 'unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Get transport from query parameters
+        $transport = $request->query->get('transport', 'async');
+        if (!\in_array($transport, self::VALID_TRANSPORTS, true)) {
+            return new JsonResponse([
+                'error' => 'Invalid transport. Valid options: '.implode(', ', self::VALID_TRANSPORTS),
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         // Get limits from query parameters or use defaults
@@ -74,7 +84,7 @@ class WorkerController extends AbstractController
         $failedCount = 0;
 
         /** @var ReceiverInterface $receiver */
-        $receiver = $this->receiverLocator->get('async'); // @phpstan-ignore symfonyContainer.serviceNotFound
+        $receiver = $this->receiverLocator->get($transport);
 
         while ($processedCount + $failedCount < $limit) {
             // Check time limit
@@ -96,7 +106,7 @@ class WorkerController extends AbstractController
                 }
 
                 try {
-                    $this->handleMessage($envelope, $receiver);
+                    $this->handleMessage($envelope, $receiver, $transport);
                     ++$processedCount;
                 } catch (\Throwable $e) {
                     ++$failedCount;
@@ -112,17 +122,18 @@ class WorkerController extends AbstractController
 
         return new JsonResponse([
             'status' => 'completed',
+            'transport' => $transport,
             'processed' => $processedCount,
             'failed' => $failedCount,
             'remaining' => $remaining,
         ]);
     }
 
-    private function handleMessage(Envelope $envelope, ReceiverInterface $receiver): void
+    private function handleMessage(Envelope $envelope, ReceiverInterface $receiver, string $transport): void
     {
         // Add stamps needed for proper message handling
         $envelope = $envelope->with(
-            new ReceivedStamp('async'),
+            new ReceivedStamp($transport),
             new ConsumedByWorkerStamp(),
         );
 

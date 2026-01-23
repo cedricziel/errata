@@ -116,10 +116,11 @@ class WorkerControllerTest extends AbstractIntegrationTestCase
         // Note: In test environment, the transport is already processed synchronously
         // by zenstruck/messenger-test, so we verify the endpoint works correctly
         $this->browser()
-            ->post('/api/worker/consume', HttpOptions::create()
+            ->post('/api/worker/consume?transport=async_events', HttpOptions::create()
                 ->withHeader('X-Worker-Secret', self::WORKER_SECRET))
             ->assertSuccessful()
-            ->assertJsonMatches('status', 'completed');
+            ->assertJsonMatches('status', 'completed')
+            ->assertJsonMatches('transport', 'async_events');
     }
 
     public function testConsumeReturnsZeroProcessedWhenQueueEmpty(): void
@@ -128,13 +129,22 @@ class WorkerControllerTest extends AbstractIntegrationTestCase
         $this->transport('async_events')->queue()->assertEmpty();
 
         $this->browser()
-            ->post('/api/worker/consume', HttpOptions::create()
+            ->post('/api/worker/consume?transport=async_events', HttpOptions::create()
                 ->withHeader('X-Worker-Secret', self::WORKER_SECRET))
             ->assertSuccessful()
             ->use(function ($browser): void {
                 $response = $browser->json()->decoded();
                 $this->assertSame('completed', $response['status']);
+                $this->assertSame('async_events', $response['transport']);
                 $this->assertSame(0, $response['processed']);
             });
+    }
+
+    public function testConsumeRejectsInvalidTransport(): void
+    {
+        $this->browser()
+            ->post('/api/worker/consume?transport=invalid', HttpOptions::create()
+                ->withHeader('X-Worker-Secret', self::WORKER_SECRET))
+            ->assertStatus(400);
     }
 }
