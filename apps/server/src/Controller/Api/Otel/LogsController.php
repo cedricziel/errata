@@ -49,6 +49,16 @@ class LogsController extends AbstractController
             return $this->createErrorResponse('bad_request', 'Empty payload', Response::HTTP_BAD_REQUEST, $isProtobuf);
         }
 
+        // Handle gzip-compressed content (OTLP collectors often send compressed data)
+        $contentEncoding = $request->headers->get('Content-Encoding', '');
+        if ('gzip' === $contentEncoding) {
+            $decompressed = @gzdecode($content);
+            if (false === $decompressed) {
+                return $this->createErrorResponse('bad_request', 'Failed to decompress gzip content', Response::HTTP_BAD_REQUEST, $isProtobuf);
+            }
+            $content = $decompressed;
+        }
+
         try {
             $logsRequest = new ExportLogsServiceRequest();
             if ($isProtobuf) {

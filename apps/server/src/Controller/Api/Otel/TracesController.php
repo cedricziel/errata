@@ -56,8 +56,21 @@ class TracesController extends AbstractController
             return $this->createErrorResponse('bad_request', 'Empty payload', Response::HTTP_BAD_REQUEST, $isProtobuf);
         }
 
+        // Handle gzip-compressed content (OTLP collectors often send compressed data)
+        $contentEncoding = $request->headers->get('Content-Encoding', '');
+        if ('gzip' === $contentEncoding) {
+            $decompressed = @gzdecode($content);
+            if (false === $decompressed) {
+                $this->logger->error('OTLP traces: Failed to decompress gzip content');
+
+                return $this->createErrorResponse('bad_request', 'Failed to decompress gzip content', Response::HTTP_BAD_REQUEST, $isProtobuf);
+            }
+            $content = $decompressed;
+        }
+
         $this->logger->debug('OTLP traces: Request received', [
             'content_type' => $contentType,
+            'content_encoding' => $contentEncoding,
             'is_protobuf' => $isProtobuf,
             'payload_size' => strlen($content),
             'project_id' => $project->getPublicId()->toRfc4122(),
