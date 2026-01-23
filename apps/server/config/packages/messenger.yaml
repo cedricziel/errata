@@ -44,6 +44,8 @@ framework:
             Symfony\Component\Notifier\Message\SmsMessage: async
 
             # Event processing - high volume writes
+            App\Message\ProcessEventBatch: async_events
+            # Legacy single event processing (kept for backward compatibility)
             App\Message\ProcessEvent: async_events
 
             # Query execution - interactive, needs fast response

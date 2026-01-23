@@ -7,14 +7,15 @@ namespace App\EventSubscriber;
 use App\Service\Parquet\ParquetWriterService;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 
 /**
- * Flushes the Parquet buffer on kernel terminate and after message handling.
+ * Flushes the Parquet buffer on kernel terminate.
  *
- * This ensures that any buffered events are written to Parquet files:
- * - After each messenger message is processed (for immediate consistency in testing/sync scenarios)
- * - When the kernel/worker process terminates (as a safety net)
+ * This ensures that any buffered events are written to Parquet files
+ * when the kernel/worker process terminates (as a safety net).
+ *
+ * Note: The ProcessEventBatchHandler writes events directly to parquet,
+ * so per-message flushing is no longer needed.
  */
 class ParquetFlushSubscriber implements EventSubscriberInterface
 {
@@ -27,16 +28,10 @@ class ParquetFlushSubscriber implements EventSubscriberInterface
     {
         return [
             KernelEvents::TERMINATE => ['onTerminate', -100],
-            WorkerMessageHandledEvent::class => ['onMessageHandled', -100],
         ];
     }
 
     public function onTerminate(): void
-    {
-        $this->parquetWriter->flush();
-    }
-
-    public function onMessageHandled(WorkerMessageHandledEvent $event): void
     {
         $this->parquetWriter->flush();
     }

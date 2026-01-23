@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Controller;
 
-use App\Message\ProcessEvent;
+use App\Message\ProcessEventBatch;
 use App\Tests\Integration\AbstractIntegrationTestCase;
 use Zenstruck\Browser\HttpOptions;
 use Zenstruck\Messenger\Test\InteractsWithMessenger;
@@ -110,7 +110,7 @@ class WorkerControllerTest extends AbstractIntegrationTestCase
         // Verify message is queued
         $this->transport('async_events')
             ->queue()
-            ->assertContains(ProcessEvent::class, 1);
+            ->assertContains(ProcessEventBatch::class, 1);
 
         // Now process the queue via the worker endpoint
         // Note: In test environment, the transport is already processed synchronously

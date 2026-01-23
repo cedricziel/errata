@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\DTO\WideEventPayload;
-use App\Message\ProcessEvent;
+use App\Message\ProcessEventBatch;
 use App\Security\ApiKeyAuthenticator;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanInterface;
@@ -73,9 +73,9 @@ class EventController extends AbstractController
             $eventType = $payload->eventType ?? 'unknown';
             $span->setAttribute('event.type', $eventType);
 
-            // Dispatch event for async processing
-            $this->messageBus->dispatch(new ProcessEvent(
-                eventData: $payload->toArray(),
+            // Dispatch batch with single event for async processing
+            $this->messageBus->dispatch(new ProcessEventBatch(
+                events: [$payload->toArray()],
                 projectId: $projectId,
                 environment: $apiKey->getEnvironment(),
             ));
@@ -139,7 +139,7 @@ class EventController extends AbstractController
                 return $this->errorResponse('Batch size exceeds maximum of 100 events', Response::HTTP_BAD_REQUEST);
             }
 
-            $accepted = 0;
+            $validEvents = [];
             $errors = [];
 
             foreach ($events as $index => $eventData) {
@@ -160,15 +160,19 @@ class EventController extends AbstractController
                     continue;
                 }
 
-                // Dispatch event for async processing
-                $this->messageBus->dispatch(new ProcessEvent(
-                    eventData: $payload->toArray(),
+                $validEvents[] = $payload->toArray();
+            }
+
+            // Dispatch single batch message for all valid events
+            if (!empty($validEvents)) {
+                $this->messageBus->dispatch(new ProcessEventBatch(
+                    events: $validEvents,
                     projectId: $projectId,
                     environment: $apiKey->getEnvironment(),
                 ));
-
-                ++$accepted;
             }
+
+            $accepted = count($validEvents);
 
             $span->setAttribute('batch.accepted', $accepted);
             $span->setAttribute('batch.errors', count($errors));
