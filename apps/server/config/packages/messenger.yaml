@@ -3,14 +3,32 @@ framework:
         failure_transport: failed
 
         transports:
-            # https://symfony.com/doc/current/messenger.html#transport-configuration
+            # General async tasks (emails, notifications)
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
+
+            # Query execution - separate for fast interactive queries
+            async_query:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: async_query
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+
+            # Event processing/parquet writes - high volume, can scale independently
+            async_events:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: async_events
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+
             failed: 'doctrine://default?queue_name=failed'
-            # sync: 'sync://'
 
         default_bus: messenger.bus.default
 
@@ -20,21 +38,22 @@ framework:
                     - App\Messenger\Middleware\TraceContextMiddleware
 
         routing:
+            # General async
             Symfony\Component\Mailer\Messenger\SendEmailMessage: async
             Symfony\Component\Notifier\Message\ChatMessage: async
             Symfony\Component\Notifier\Message\SmsMessage: async
 
-            # Route event processing to async (or sync in dev)
-            App\Message\ProcessEvent: async
+            # Event processing - high volume writes
+            App\Message\ProcessEvent: async_events
 
-            # Route query execution to async
-            App\Message\ExecuteQuery: async
-
-            # Route facet batch computation to async
-            App\Message\ComputeFacetBatch: async
+            # Query execution - interactive, needs fast response
+            App\Message\ExecuteQuery: async_query
+            App\Message\ComputeFacetBatch: async_query
 
 when@test:
     framework:
         messenger:
             transports:
                 async: 'test://'
+                async_query: 'test://'
+                async_events: 'test://'
