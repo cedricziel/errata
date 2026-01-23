@@ -63,8 +63,11 @@ class LogIngestionQueryTest extends AbstractIntegrationTestCase
         $this->assertSame('error', $eventData['severity'], 'ProcessEvent should have correct severity');
         $this->assertSame('test-log-service', $eventData['bundle_id'], 'ProcessEvent should have correct bundle_id (service.name)');
 
-        // 3. Process: Handle the ProcessEvent message (writes to parquet)
+        // 3. Process: Handle the ProcessEvent message (writes to parquet buffer)
         $this->transport('async_events')->process(1);
+
+        // Flush parquet buffer to write events to disk
+        $this->flushParquetBuffer();
 
         // Verify parquet files exist after processing
         /** @var StorageFactory $storageFactory */
@@ -164,6 +167,7 @@ class LogIngestionQueryTest extends AbstractIntegrationTestCase
 
         // Process all
         $this->transport('async_events')->process(3);
+        $this->flushParquetBuffer();
 
         // Query and verify all logs are found
         /** @var AsyncQueryResultStore $resultStore */
@@ -213,6 +217,7 @@ class LogIngestionQueryTest extends AbstractIntegrationTestCase
 
         // 3. Process: Handle the ProcessEvent message
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // 4. Query: Execute query with a timeframe that doesn't include our log
         /** @var AsyncQueryResultStore $resultStore */
@@ -282,6 +287,7 @@ class LogIngestionQueryTest extends AbstractIntegrationTestCase
 
         // 3. Process: Handle the ProcessEvent message
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // 4. Query: Execute async query with trace_id filter to get that column in results
         /** @var AsyncQueryResultStore $resultStore */

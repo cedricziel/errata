@@ -32,8 +32,8 @@ class ParquetWriterService
 {
     private const BATCH_SIZE = 1000;
 
-    /** @var array<string, mixed>[] */
-    private array $buffer = [];
+    /** @var array<string, array<array<string, mixed>>> Partition-keyed buffers */
+    private array $partitionBuffers = [];
 
     public function __construct(
         private readonly StorageFactory $storageFactory,
@@ -43,21 +43,24 @@ class ParquetWriterService
     }
 
     /**
-     * Add an event to the write buffer.
+     * Add an event to the write buffer (partition-aware).
+     *
+     * Events are buffered by partition key and flushed when the partition buffer reaches BATCH_SIZE.
      *
      * @param array<string, mixed> $event
      */
     public function addEvent(array $event): void
     {
-        $this->buffer[] = WideEventSchema::normalize($event);
+        $key = $this->getPartitionKey($event);
+        $this->partitionBuffers[$key][] = WideEventSchema::normalize($event);
 
-        if (count($this->buffer) >= self::BATCH_SIZE) {
-            $this->flush();
+        if (count($this->partitionBuffers[$key]) >= self::BATCH_SIZE) {
+            $this->flushPartition($key);
         }
     }
 
     /**
-     * Add multiple events to the write buffer.
+     * Add multiple events to the write buffer (partition-aware).
      *
      * @param array<array<string, mixed>> $events
      */
@@ -69,24 +72,51 @@ class ParquetWriterService
     }
 
     /**
-     * Flush the buffer to a Parquet file.
+     * Flush all partition buffers to Parquet files.
      */
     public function flush(): void
     {
-        if (empty($this->buffer)) {
+        foreach (array_keys($this->partitionBuffers) as $key) {
+            $this->flushPartition($key);
+        }
+    }
+
+    /**
+     * Flush a specific partition buffer to a Parquet file.
+     */
+    private function flushPartition(string $partitionKey): void
+    {
+        if (empty($this->partitionBuffers[$partitionKey])) {
             return;
         }
 
         try {
-            $this->writeEvents($this->buffer);
-            $this->buffer = [];
+            $this->writeEvents($this->partitionBuffers[$partitionKey]);
+            unset($this->partitionBuffers[$partitionKey]);
         } catch (\Throwable $e) {
-            $this->logger->error('Failed to flush events to Parquet', [
+            $this->logger->error('Failed to flush partition to Parquet', [
                 'error' => $e->getMessage(),
-                'event_count' => count($this->buffer),
+                'partition' => $partitionKey,
+                'event_count' => count($this->partitionBuffers[$partitionKey]),
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Compute partition key for an event.
+     *
+     * @param array<string, mixed> $event
+     */
+    private function getPartitionKey(array $event): string
+    {
+        $orgId = $event['organization_id'] ?? 'unknown';
+        $projectId = $event['project_id'] ?? 'unknown';
+        $eventType = $event['event_type'] ?? 'unknown';
+        $timestamp = $event['timestamp'] ?? (int) (microtime(true) * 1000);
+        $date = date('Y-m-d', (int) ($timestamp / 1000));
+
+        return "{$orgId}/{$projectId}/{$eventType}/{$date}";
     }
 
     /**
@@ -296,19 +326,24 @@ class ParquetWriterService
     }
 
     /**
-     * Get the buffer size.
+     * Get the total buffer size across all partitions.
      */
     public function getBufferSize(): int
     {
-        return count($this->buffer);
+        $total = 0;
+        foreach ($this->partitionBuffers as $buffer) {
+            $total += count($buffer);
+        }
+
+        return $total;
     }
 
     /**
-     * Clear the buffer without writing.
+     * Clear all partition buffers without writing.
      */
     public function clearBuffer(): void
     {
-        $this->buffer = [];
+        $this->partitionBuffers = [];
     }
 
     private function startSpan(string $name): SpanInterface

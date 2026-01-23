@@ -66,8 +66,9 @@ class MetricIngestionQueryTest extends AbstractIntegrationTestCase
         $this->assertSame($metricUnit, $eventData['metric_unit'], 'ProcessEvent should have correct metric_unit');
         $this->assertSame('test-metric-service', $eventData['bundle_id'], 'ProcessEvent should have correct bundle_id (service.name)');
 
-        // 3. Process: Handle the ProcessEvent message (writes to parquet)
+        // 3. Process: Handle the ProcessEvent message (writes to parquet buffer)
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // Verify parquet files exist after processing
         /** @var StorageFactory $storageFactory */
@@ -136,6 +137,7 @@ class MetricIngestionQueryTest extends AbstractIntegrationTestCase
 
         // 3. Process: Handle the ProcessEvent message
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // 4. Query: Execute query with a timeframe that doesn't include our metric
         /** @var AsyncQueryResultStore $resultStore */
@@ -203,6 +205,7 @@ class MetricIngestionQueryTest extends AbstractIntegrationTestCase
 
         // 3. Process: Handle the ProcessEvent message
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // 4. Query and verify
         /** @var AsyncQueryResultStore $resultStore */
@@ -264,6 +267,7 @@ class MetricIngestionQueryTest extends AbstractIntegrationTestCase
 
         // 3. Process: Handle the ProcessEvent message
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // 4. Query and verify
         /** @var AsyncQueryResultStore $resultStore */
@@ -351,6 +355,7 @@ class MetricIngestionQueryTest extends AbstractIntegrationTestCase
 
         // Process all
         $this->transport('async_events')->process(3);
+        $this->flushParquetBuffer();
 
         // Query and verify all metrics are retrievable
         /** @var AsyncQueryResultStore $resultStore */

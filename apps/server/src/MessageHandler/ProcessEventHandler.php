@@ -75,13 +75,13 @@ class ProcessEventHandler
             });
             $span->setAttribute('issue.id', $issue->getPublicId()?->toRfc4122());
 
-            // Write event to Parquet
+            // Add event to Parquet buffer (will be flushed on worker shutdown or when buffer is full)
             try {
-                $this->traceOperation('parquet.write', function () use ($eventData): void {
-                    $this->parquetWriter->writeEvent($eventData);
+                $this->traceOperation('parquet.buffer', function () use ($eventData): void {
+                    $this->parquetWriter->addEvent($eventData);
                 });
             } catch (\Throwable $e) {
-                $this->logger->error('Failed to write event to Parquet', [
+                $this->logger->error('Failed to buffer event for Parquet', [
                     'error' => $e->getMessage(),
                     'event_id' => $eventData['event_id'],
                 ]);

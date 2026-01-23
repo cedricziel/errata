@@ -50,6 +50,9 @@ framework:
             App\Message\ExecuteQuery: async_query
             App\Message\ComputeFacetBatch: async_query
 
+            # Scheduled tasks - compaction, maintenance
+            App\Message\CompactParquet: async
+
 when@test:
     framework:
         messenger:

@@ -66,8 +66,9 @@ class TraceIngestionQueryTest extends AbstractIntegrationTestCase
         $this->assertEqualsWithDelta(100.0, $eventData['duration_ms'], 0.1, 'ProcessEvent should have correct duration_ms');
         $this->assertNull($eventData['parent_span_id'], 'Root span should have no parent_span_id');
 
-        // 3. Process: Handle the ProcessEvent message (writes to parquet)
+        // 3. Process: Handle the ProcessEvent message (writes to parquet buffer)
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // Verify parquet files exist after processing
         /** @var StorageFactory $storageFactory */
@@ -140,6 +141,7 @@ class TraceIngestionQueryTest extends AbstractIntegrationTestCase
         $this->assertSame($traceData['spanId'], $messages[0]->eventData['span_id']);
 
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // Query with trace_id filter - this will include trace_id in returned columns
         /** @var AsyncQueryResultStore $resultStore */
@@ -232,6 +234,7 @@ class TraceIngestionQueryTest extends AbstractIntegrationTestCase
 
         // 3. Process
         $this->transport('async_events')->process(2);
+        $this->flushParquetBuffer();
 
         // 4. Query and verify
         /** @var AsyncQueryResultStore $resultStore */
@@ -282,6 +285,7 @@ class TraceIngestionQueryTest extends AbstractIntegrationTestCase
 
         // 3. Process: Handle the ProcessEvent message
         $this->transport('async_events')->process(1);
+        $this->flushParquetBuffer();
 
         // 4. Query: Execute query with a timeframe that doesn't include our trace
         /** @var AsyncQueryResultStore $resultStore */

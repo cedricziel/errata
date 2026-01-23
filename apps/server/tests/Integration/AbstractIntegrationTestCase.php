@@ -72,7 +72,23 @@ abstract class AbstractIntegrationTestCase extends WebTestCase
 
     protected function tearDown(): void
     {
+        // Flush any buffered parquet events at the end of each test
+        $this->flushParquetBuffer();
+
         parent::tearDown();
+    }
+
+    /**
+     * Flush the parquet buffer to ensure all buffered events are written.
+     *
+     * Call this after processing messages if you need to verify parquet files
+     * were written during the test.
+     */
+    protected function flushParquetBuffer(): void
+    {
+        /** @var \App\Service\Parquet\ParquetWriterService $parquetWriter */
+        $parquetWriter = static::getContainer()->get(\App\Service\Parquet\ParquetWriterService::class);
+        $parquetWriter->flush();
     }
 
     protected function resetDatabase(): void
