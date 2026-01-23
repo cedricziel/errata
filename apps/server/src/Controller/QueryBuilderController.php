@@ -278,9 +278,9 @@ class QueryBuilderController extends AbstractController
 
         return new JsonResponse([
             'queryId' => $queryId,
-            'streamUrl' => $this->generateUrl('query_stream', ['queryId' => $queryId], UrlGeneratorInterface::ABSOLUTE_URL),
-            'cancelUrl' => $this->generateUrl('query_cancel', ['queryId' => $queryId], UrlGeneratorInterface::ABSOLUTE_URL),
-            'statusUrl' => $this->generateUrl('query_status', ['queryId' => $queryId], UrlGeneratorInterface::ABSOLUTE_URL),
+            'streamUrl' => $this->generateUrl('query_stream', ['queryId' => $queryId], UrlGeneratorInterface::ABSOLUTE_PATH),
+            'cancelUrl' => $this->generateUrl('query_cancel', ['queryId' => $queryId], UrlGeneratorInterface::ABSOLUTE_PATH),
+            'statusUrl' => $this->generateUrl('query_status', ['queryId' => $queryId], UrlGeneratorInterface::ABSOLUTE_PATH),
         ]);
     }
 
