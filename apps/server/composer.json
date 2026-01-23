@@ -15,6 +15,7 @@
         "doctrine/doctrine-bundle": "^3.2.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6.1",
+        "dragonmantank/cron-expression": "^3.6",
         "easycorp/easyadmin-bundle": "^4.27.7",
         "flow-php/etl": "^0.30.0",
         "flow-php/etl-adapter-parquet": "^0.30.0",
