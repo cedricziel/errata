@@ -35,55 +35,55 @@ return [
         'version' => '1.9.0',
     ],
     '@opentelemetry/core' => [
-        'version' => '2.4.0',
+        'version' => '2.5.0',
     ],
     '@opentelemetry/resources' => [
-        'version' => '2.4.0',
+        'version' => '2.5.0',
     ],
     '@opentelemetry/semantic-conventions' => [
         'version' => '1.39.0',
     ],
     '@opentelemetry/sdk-trace-base' => [
-        'version' => '2.4.0',
+        'version' => '2.5.0',
     ],
     '@opentelemetry/sdk-trace-web' => [
-        'version' => '2.4.0',
+        'version' => '2.5.0',
     ],
     '@opentelemetry/exporter-trace-otlp-http' => [
-        'version' => '0.210.0',
+        'version' => '0.211.0',
     ],
     '@opentelemetry/otlp-exporter-base' => [
-        'version' => '0.210.0',
+        'version' => '0.211.0',
     ],
     '@opentelemetry/otlp-exporter-base/browser-http' => [
-        'version' => '0.210.0',
+        'version' => '0.211.0',
     ],
     '@opentelemetry/otlp-transformer' => [
-        'version' => '0.210.0',
+        'version' => '0.211.0',
     ],
     'protobufjs/minimal' => [
         'version' => '8.0.0',
     ],
     '@opentelemetry/instrumentation' => [
-        'version' => '0.210.0',
+        'version' => '0.211.0',
     ],
     '@opentelemetry/instrumentation-fetch' => [
-        'version' => '0.210.0',
+        'version' => '0.211.0',
     ],
     '@opentelemetry/instrumentation-document-load' => [
-        'version' => '0.55.0',
+        'version' => '0.56.0',
     ],
     '@opentelemetry/context-zone' => [
-        'version' => '2.4.0',
+        'version' => '2.5.0',
     ],
     '@opentelemetry/context-zone-peer-dep' => [
-        'version' => '2.4.0',
+        'version' => '2.5.0',
     ],
     '@opentelemetry/api-logs' => [
-        'version' => '0.210.0',
+        'version' => '0.211.0',
     ],
     '@opentelemetry/sdk-metrics' => [
-        'version' => '2.4.0',
+        'version' => '2.5.0',
     ],
     'zone.js' => [
         'version' => '0.16.0',
@@ -110,6 +110,6 @@ return [
         'version' => '1.1.0',
     ],
     '@kurkle/color' => [
-        'version' => '0.3.4',
+        'version' => '0.4.0',
     ],
 ];
