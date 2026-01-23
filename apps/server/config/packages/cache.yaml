@@ -17,3 +17,9 @@ when@dev:
     framework:
         cache:
             app: cache.adapter.filesystem
+
+# Use filesystem cache for tests
+when@test:
+    framework:
+        cache:
+            app: cache.adapter.filesystem
