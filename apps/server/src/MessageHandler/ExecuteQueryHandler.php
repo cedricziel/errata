@@ -35,6 +35,11 @@ class ExecuteQueryHandler
 
     public function __invoke(ExecuteQuery $message): void
     {
+        $this->logger->info('ExecuteQueryHandler received message', [
+            'query_id' => $message->queryId,
+            'user_id' => $message->userId,
+        ]);
+
         $span = $this->startSpan('execute_async_query');
         $span->setAttribute('query.id', $message->queryId);
         $span->setAttribute('user.id', $message->userId);

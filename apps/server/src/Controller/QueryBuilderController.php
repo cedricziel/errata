@@ -12,6 +12,7 @@ use App\Service\QueryBuilder\AsyncQueryResultStore;
 use App\Service\QueryBuilder\AttributeMetadataService;
 use App\Service\QueryBuilder\EventQueryService;
 use App\Service\TimeframeService;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,6 +35,7 @@ class QueryBuilderController extends AbstractController
         private readonly TimeframeService $timeframeService,
         private readonly MessageBusInterface $messageBus,
         private readonly AsyncQueryResultStore $resultStore,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -269,12 +271,20 @@ class QueryBuilderController extends AbstractController
         );
 
         // Dispatch the message for async execution
+        $this->logger->info('Dispatching ExecuteQuery message', [
+            'query_id' => $queryId,
+            'user_id' => (string) ($user->getId() ?? 0),
+            'organization_id' => $organizationId,
+        ]);
+
         $this->messageBus->dispatch(new ExecuteQuery(
             $queryId,
             $queryRequest->toArray(),
             (string) ($user->getId() ?? 0),
             $organizationId,
         ));
+
+        $this->logger->info('ExecuteQuery message dispatched', ['query_id' => $queryId]);
 
         return new JsonResponse([
             'queryId' => $queryId,
