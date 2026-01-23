@@ -9,6 +9,7 @@ use App\Security\ApiKeyAuthenticator;
 use App\Service\Otel\TraceMapper;
 use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceRequest;
 use Opentelemetry\Proto\Collector\Trace\V1\ExportTraceServiceResponse;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +26,7 @@ class TracesController extends AbstractController
     public function __construct(
         private readonly MessageBusInterface $messageBus,
         private readonly TraceMapper $traceMapper,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -46,8 +48,20 @@ class TracesController extends AbstractController
 
         $content = $request->getContent();
         if ('' === $content) {
+            $this->logger->warning('OTLP traces: Empty payload received', [
+                'content_type' => $contentType,
+                'x_errata_key' => substr($request->headers->get('X-Errata-Key', ''), 0, 20).'...',
+            ]);
+
             return $this->createErrorResponse('bad_request', 'Empty payload', Response::HTTP_BAD_REQUEST, $isProtobuf);
         }
+
+        $this->logger->debug('OTLP traces: Request received', [
+            'content_type' => $contentType,
+            'is_protobuf' => $isProtobuf,
+            'payload_size' => strlen($content),
+            'project_id' => $project->getPublicId()->toRfc4122(),
+        ]);
 
         try {
             $traceRequest = new ExportTraceServiceRequest();
@@ -55,11 +69,24 @@ class TracesController extends AbstractController
                 $traceRequest->mergeFromString($content);
             } else {
                 if (!$this->isValidJson($content)) {
+                    $this->logger->error('OTLP traces: Invalid JSON payload', [
+                        'payload_preview' => substr($content, 0, 200),
+                    ]);
+
                     return $this->createErrorResponse('bad_request', 'Invalid JSON payload', Response::HTTP_BAD_REQUEST, $isProtobuf);
                 }
                 $traceRequest->mergeFromJsonString($content);
             }
         } catch (\Throwable $e) {
+            $this->logger->error('OTLP traces: Failed to parse request', [
+                'error' => $e->getMessage(),
+                'exception_class' => $e::class,
+                'content_type' => $contentType,
+                'is_protobuf' => $isProtobuf,
+                'payload_size' => strlen($content),
+                'payload_preview' => $isProtobuf ? bin2hex(substr($content, 0, 100)) : substr($content, 0, 200),
+            ]);
+
             return $this->createErrorResponse('bad_request', 'Failed to parse OTLP trace request: '.$e->getMessage(), Response::HTTP_BAD_REQUEST, $isProtobuf);
         }
 
