@@ -168,9 +168,19 @@ class ParquetReaderService
             // Use date-specific glob patterns for partition pruning
             // Instead of dt=* (which scans all partitions), enumerate each date
             $globs = $this->flowConfigFactory->buildGlobPatternsForDateRange(
+                organizationId: $organizationId,
+                projectId: $projectId,
                 from: $from,
                 to: $to,
             );
+
+            $this->logger->debug('Reading events with columns using glob patterns', [
+                'pattern_count' => count($globs),
+                'organization_id' => $organizationId,
+                'project_id' => $projectId,
+                'from' => $from?->format('Y-m-d'),
+                'to' => $to?->format('Y-m-d'),
+            ]);
 
             $extractors = array_map(
                 fn (string $glob) => from_parquet($glob, columns: $columnsToRead),
