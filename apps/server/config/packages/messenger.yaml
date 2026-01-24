@@ -44,6 +44,7 @@ framework:
         buses:
             messenger.bus.default:
                 middleware:
+                    - App\Messenger\Middleware\DebugLoggingMiddleware
                     - App\Messenger\Middleware\TraceContextMiddleware
 
         routing:
