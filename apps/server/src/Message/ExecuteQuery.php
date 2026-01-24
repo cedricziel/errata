@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Message;
 
+use App\Messenger\Attribute\WithTimeout;
+
 /**
  * Message for executing a query asynchronously.
  *
  * Dispatched to the async transport and handled by ExecuteQueryHandler.
  * Results are stored in AsyncQueryResultStore for SSE retrieval.
  */
+#[WithTimeout(60)]
 class ExecuteQuery
 {
     /**

@@ -6,6 +6,10 @@ framework:
             # General async tasks (emails, notifications)
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: async        # Doctrine
+                    stream: async            # Redis
+                    group: async             # Redis consumer group
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
@@ -14,7 +18,9 @@ framework:
             async_query:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
-                    stream: async_query
+                    queue_name: async_query  # Doctrine
+                    stream: async_query      # Redis
+                    group: async_query       # Redis consumer group
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
@@ -23,7 +29,9 @@ framework:
             async_events:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
-                    stream: async_events
+                    queue_name: async_events  # Doctrine
+                    stream: async_events      # Redis
+                    group: async_events       # Redis consumer group
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
@@ -32,7 +40,9 @@ framework:
             async_compaction:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
-                    stream: async_compaction
+                    queue_name: async_compaction  # Doctrine
+                    stream: async_compaction      # Redis
+                    group: async_compaction       # Redis consumer group
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
@@ -45,6 +55,7 @@ framework:
             messenger.bus.default:
                 middleware:
                     - App\Messenger\Middleware\DebugLoggingMiddleware
+                    - App\Messenger\Middleware\TimeoutMiddleware
                     - App\Messenger\Middleware\TraceContextMiddleware
 
         routing:

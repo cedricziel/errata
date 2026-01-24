@@ -1,7 +1,7 @@
 web: supervisord -c /etc/supervisor/conf.d/supervisord.conf -n
-worker: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
-worker-query: php bin/console messenger:consume async_query --time-limit=3600 --memory-limit=256M
-worker-events: php bin/console messenger:consume async_events --time-limit=3600 --memory-limit=256M
-worker-compaction: php bin/console messenger:consume async_compaction --time-limit=3600 --memory-limit=1024M
+worker: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M --keepalive
+worker-query: php bin/console messenger:consume async_query --time-limit=3600 --memory-limit=256M --keepalive
+worker-events: php bin/console messenger:consume async_events --time-limit=3600 --memory-limit=256M --keepalive
+worker-compaction: php bin/console messenger:consume async_compaction --time-limit=3600 --memory-limit=1024M --keepalive
 scheduler: php bin/console messenger:consume scheduler_default --time-limit=3600 --memory-limit=512M
 release: php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
