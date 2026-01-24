@@ -66,6 +66,11 @@ when@dev:
                         max_retries: 3
                         multiplier: 2
 
+                scheduler_default:
+                    dsn: 'doctrine://default'
+                    options:
+                        queue_name: scheduler_default
+
                 failed: 'doctrine://default?queue_name=failed'
 
 # Production: Use Redis transport (scalable)
@@ -117,6 +122,15 @@ when@prod:
                         max_retries: 3
                         multiplier: 2
 
+                # Scheduler transport (auto-created by Symfony Scheduler)
+                scheduler_default:
+                    dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                    options:
+                        stream: scheduler_default
+                        group: scheduler_default
+                        delete_after_ack: false
+                        delete_after_reject: false
+
                 failed: 'doctrine://default?queue_name=failed'
 
 # Test: Use in-memory sync transport
@@ -128,4 +142,5 @@ when@test:
                 async_query: 'test://'
                 async_events: 'test://'
                 async_compaction: 'test://'
+                scheduler_default: 'test://'
                 failed: 'test://'
