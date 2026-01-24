@@ -12,7 +12,7 @@ use App\Messenger\Attribute\WithTimeout;
  * Dispatched to the async transport and handled by ExecuteQueryHandler.
  * Results are stored in AsyncQueryResultStore for SSE retrieval.
  */
-#[WithTimeout(60)]
+#[WithTimeout(180)]
 class ExecuteQuery
 {
     /**
