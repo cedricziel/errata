@@ -15,6 +15,7 @@ use Psr\Log\LoggerInterface;
 use function Flow\ETL\Adapter\Parquet\from_parquet;
 use function Flow\ETL\DSL\all;
 use function Flow\ETL\DSL\data_frame;
+use function Flow\ETL\DSL\from_all;
 use function Flow\ETL\DSL\lit;
 use function Flow\ETL\DSL\ref;
 
@@ -57,10 +58,19 @@ class ParquetReaderService
 
         try {
             $config = $this->flowConfigFactory->createConfig();
-            $glob = $this->flowConfigFactory->buildGlobPattern($organizationId, $projectId, $eventType, $from, $to);
 
-            $this->logger->debug('Reading events with glob pattern', [
-                'glob' => $glob,
+            // Use date-specific glob patterns for partition pruning
+            // Instead of dt=* (which scans all partitions), enumerate each date
+            $globs = $this->flowConfigFactory->buildGlobPatternsForDateRange(
+                organizationId: $organizationId,
+                projectId: $projectId,
+                eventType: $eventType,
+                from: $from,
+                to: $to,
+            );
+
+            $this->logger->debug('Reading events with glob patterns', [
+                'pattern_count' => count($globs),
                 'organization_id' => $organizationId,
                 'project_id' => $projectId,
                 'event_type' => $eventType,
@@ -68,8 +78,12 @@ class ParquetReaderService
                 'to' => $to?->format('Y-m-d'),
             ]);
 
-            $df = data_frame($config)
-                ->read(from_parquet($glob));
+            $extractors = array_map(
+                fn (string $glob) => from_parquet($glob),
+                $globs
+            );
+
+            $df = data_frame($config)->read(from_all(...$extractors));
 
             // Apply partition filters (these are applied during file selection)
             $partitionFilter = $this->buildPartitionFilter($organizationId, $projectId, $eventType, $from, $to);
@@ -139,11 +153,6 @@ class ParquetReaderService
         try {
             $config = $this->flowConfigFactory->createConfig();
 
-            // Always use wildcards for the glob pattern to ensure Flow-PHP finds files.
-            // Flow-PHP doesn't properly handle mixed glob patterns (some specific, some wildcard).
-            // We rely on partition filters for exact matching instead.
-            $glob = $this->flowConfigFactory->buildGlobPattern(null, null, null, $from, $to);
-
             // Ensure partition columns are included for filtering, even if not requested
             $columnsToRead = $columns;
             if (null !== $organizationId && !in_array('organization_id', $columnsToRead, true)) {
@@ -156,8 +165,19 @@ class ParquetReaderService
                 $columnsToRead[] = 'timestamp';
             }
 
-            $df = data_frame($config)
-                ->read(from_parquet($glob, columns: $columnsToRead));
+            // Use date-specific glob patterns for partition pruning
+            // Instead of dt=* (which scans all partitions), enumerate each date
+            $globs = $this->flowConfigFactory->buildGlobPatternsForDateRange(
+                from: $from,
+                to: $to,
+            );
+
+            $extractors = array_map(
+                fn (string $glob) => from_parquet($glob, columns: $columnsToRead),
+                $globs
+            );
+
+            $df = data_frame($config)->read(from_all(...$extractors));
 
             // Apply partition filters to narrow down results
             $partitionFilter = $this->buildPartitionFilter($organizationId, $projectId, null, $from, $to);

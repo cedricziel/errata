@@ -252,6 +252,65 @@ class HivePartitioningIntegrationTest extends KernelTestCase
         $this->assertCount(0, $events);
     }
 
+    public function testReadEventsWithDateRangeOnlyReadsRelevantPartitions(): void
+    {
+        $orgId = 'org-'.Uuid::v7();
+        $projectId = 'proj-'.Uuid::v7();
+
+        // Create events on 3 different days
+        $day1 = new \DateTimeImmutable('2024-01-15 10:00:00');
+        $day2 = new \DateTimeImmutable('2024-01-16 10:00:00');
+        $day3 = new \DateTimeImmutable('2024-01-17 10:00:00');
+
+        $this->writer->writeEvents([$this->createEvent($orgId, $projectId, 'log', $day1->getTimestamp() * 1000, 'event-day1')]);
+        $this->writer->writeEvents([$this->createEvent($orgId, $projectId, 'log', $day2->getTimestamp() * 1000, 'event-day2')]);
+        $this->writer->writeEvents([$this->createEvent($orgId, $projectId, 'log', $day3->getTimestamp() * 1000, 'event-day3')]);
+
+        // Query only days 1 and 2
+        $events = iterator_to_array($this->reader->readEvents(
+            $orgId,
+            $projectId,
+            'log',
+            $day1,
+            $day2,
+        ));
+
+        // Should return 2 events, not 3
+        $this->assertCount(2, $events);
+        $messages = array_column($events, 'message');
+        $this->assertContains('event-day1', $messages);
+        $this->assertContains('event-day2', $messages);
+        $this->assertNotContains('event-day3', $messages);
+    }
+
+    public function testReadEventsWithColumnsUsesDatePartitionPruning(): void
+    {
+        $orgId = 'org-'.Uuid::v7();
+        $projectId = 'proj-'.Uuid::v7();
+
+        // Create events on 3 different days
+        $day1 = new \DateTimeImmutable('2024-01-15 10:00:00');
+        $day2 = new \DateTimeImmutable('2024-01-16 10:00:00');
+        $day3 = new \DateTimeImmutable('2024-01-17 10:00:00');
+
+        $this->writer->writeEvents([$this->createEvent($orgId, $projectId, 'log', $day1->getTimestamp() * 1000, 'col-event-day1')]);
+        $this->writer->writeEvents([$this->createEvent($orgId, $projectId, 'log', $day2->getTimestamp() * 1000, 'col-event-day2')]);
+        $this->writer->writeEvents([$this->createEvent($orgId, $projectId, 'log', $day3->getTimestamp() * 1000, 'col-event-day3')]);
+
+        // Query only day 2 using readEventsWithColumns
+        $events = iterator_to_array($this->reader->readEventsWithColumns(
+            organizationId: $orgId,
+            projectId: $projectId,
+            from: $day2,
+            to: $day2,
+            columns: ['event_id', 'message', 'timestamp'],
+        ));
+
+        // Should return only 1 event
+        $this->assertCount(1, $events);
+        $this->assertSame('col-event-day2', $events[0]['message']);
+    }
+
     public function testPartitionDirectoryStructure(): void
     {
         $orgId = 'org-structure-test';
