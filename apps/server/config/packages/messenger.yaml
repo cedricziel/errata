@@ -2,53 +2,6 @@ framework:
     messenger:
         failure_transport: failed
 
-        transports:
-            # General async tasks (emails, notifications)
-            async:
-                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
-                options:
-                    queue_name: async        # Doctrine
-                    stream: async            # Redis
-                    group: async             # Redis consumer group
-                retry_strategy:
-                    max_retries: 3
-                    multiplier: 2
-
-            # Query execution - separate for fast interactive queries
-            async_query:
-                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
-                options:
-                    queue_name: async_query  # Doctrine
-                    stream: async_query      # Redis
-                    group: async_query       # Redis consumer group
-                retry_strategy:
-                    max_retries: 3
-                    multiplier: 2
-
-            # Event processing/parquet writes - high volume, can scale independently
-            async_events:
-                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
-                options:
-                    queue_name: async_events  # Doctrine
-                    stream: async_events      # Redis
-                    group: async_events       # Redis consumer group
-                retry_strategy:
-                    max_retries: 3
-                    multiplier: 2
-
-            # Parquet compaction - memory intensive, separate worker
-            async_compaction:
-                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
-                options:
-                    queue_name: async_compaction  # Doctrine
-                    stream: async_compaction      # Redis
-                    group: async_compaction       # Redis consumer group
-                retry_strategy:
-                    max_retries: 3
-                    multiplier: 2
-
-            failed: 'doctrine://default?queue_name=failed'
-
         default_bus: messenger.bus.default
 
         buses:
@@ -76,6 +29,89 @@ framework:
             # Scheduled tasks - compaction, maintenance
             App\Message\CompactParquet: async_compaction
 
+# Development: Use Doctrine transport (no Redis required)
+when@dev:
+    framework:
+        messenger:
+            transports:
+                async:
+                    dsn: 'doctrine://default'
+                    options:
+                        queue_name: async
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                async_query:
+                    dsn: 'doctrine://default'
+                    options:
+                        queue_name: async_query
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                async_events:
+                    dsn: 'doctrine://default'
+                    options:
+                        queue_name: async_events
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                async_compaction:
+                    dsn: 'doctrine://default'
+                    options:
+                        queue_name: async_compaction
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                failed: 'doctrine://default?queue_name=failed'
+
+# Production: Use Redis transport (scalable)
+when@prod:
+    framework:
+        messenger:
+            transports:
+                async:
+                    dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                    options:
+                        stream: async
+                        group: async
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                async_query:
+                    dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                    options:
+                        stream: async_query
+                        group: async_query
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                async_events:
+                    dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                    options:
+                        stream: async_events
+                        group: async_events
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                async_compaction:
+                    dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                    options:
+                        stream: async_compaction
+                        group: async_compaction
+                    retry_strategy:
+                        max_retries: 3
+                        multiplier: 2
+
+                failed: 'doctrine://default?queue_name=failed'
+
+# Test: Use in-memory sync transport
 when@test:
     framework:
         messenger:
@@ -84,3 +120,4 @@ when@test:
                 async_query: 'test://'
                 async_events: 'test://'
                 async_compaction: 'test://'
+                failed: 'test://'
