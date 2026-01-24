@@ -14,7 +14,7 @@ framework:
             async_query:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
-                    queue_name: async_query
+                    stream: async_query
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
@@ -23,7 +23,7 @@ framework:
             async_events:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
-                    queue_name: async_events
+                    stream: async_events
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
