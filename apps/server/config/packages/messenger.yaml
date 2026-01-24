@@ -78,6 +78,8 @@ when@prod:
                     options:
                         stream: async
                         group: async
+                        delete_after_ack: false
+                        delete_after_reject: false
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
@@ -87,6 +89,8 @@ when@prod:
                     options:
                         stream: async_query
                         group: async_query
+                        delete_after_ack: false
+                        delete_after_reject: false
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
@@ -96,6 +100,8 @@ when@prod:
                     options:
                         stream: async_events
                         group: async_events
+                        delete_after_ack: false
+                        delete_after_reject: false
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
@@ -105,6 +111,8 @@ when@prod:
                     options:
                         stream: async_compaction
                         group: async_compaction
+                        delete_after_ack: false
+                        delete_after_reject: false
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
