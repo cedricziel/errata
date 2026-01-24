@@ -21,12 +21,18 @@ class Schedule implements ScheduleProviderInterface
 
     public function getSchedule(): SymfonySchedule
     {
+        $today = (new \DateTimeImmutable())->format('Y-m-d');
+        $yesterday = (new \DateTimeImmutable('-1 day'))->format('Y-m-d');
+
         return (new SymfonySchedule())
             ->stateful($this->cache) // ensure missed tasks are executed
             ->processOnlyLastMissedRun(true) // ensure only last missed task is run
 
-            // Run Parquet compaction every minute to merge partition files
-            ->add(RecurringMessage::cron('* * * * *', new CompactParquet()))
+            // Compact today's files every minute (catch recent writes)
+            ->add(RecurringMessage::cron('* * * * *', new CompactParquet($today)))
+
+            // Compact yesterday's files every 10 minutes (catch stragglers)
+            ->add(RecurringMessage::cron('*/10 * * * *', new CompactParquet($yesterday)))
         ;
     }
 }
