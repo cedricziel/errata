@@ -4,17 +4,29 @@ declare(strict_types=1);
 
 namespace App\Service\Otel;
 
+use App\Repository\ProjectRepository;
 use App\Service\Parquet\ParquetReaderService;
 use App\Service\Parquet\WideEventSchema;
 
-/**
- * Service for querying OpenTelemetry data (traces, logs, metrics) from Parquet storage.
- */
 class OtelDataService
 {
     public function __construct(
         private readonly ParquetReaderService $parquetReader,
+        private readonly ProjectRepository $projectRepository,
     ) {
+    }
+
+    /**
+     * Get the organization ID for a project (for partition pruning).
+     */
+    private function getOrganizationId(string $projectId): ?string
+    {
+        $project = $this->projectRepository->findByPublicId($projectId);
+        if (null === $project) {
+            return null;
+        }
+
+        return $project->getOrganization()->getPublicId()?->toRfc4122();
     }
 
     /**
@@ -29,8 +41,10 @@ class OtelDataService
         int $limit = 50,
         int $offset = 0,
     ): array {
+        $organizationId = $this->getOrganizationId($projectId);
+
         $spans = [];
-        foreach ($this->parquetReader->readEvents(null, $projectId, WideEventSchema::EVENT_TYPE_SPAN, $from, $to) as $span) {
+        foreach ($this->parquetReader->readEvents($organizationId, $projectId, WideEventSchema::EVENT_TYPE_SPAN, $from, $to) as $span) {
             $spans[] = $span;
         }
 
@@ -105,8 +119,10 @@ class OtelDataService
      */
     public function getTraceSpans(string $projectId, string $traceId): array
     {
+        $organizationId = $this->getOrganizationId($projectId);
+
         $spans = [];
-        foreach ($this->parquetReader->readEvents(null, $projectId, WideEventSchema::EVENT_TYPE_SPAN) as $span) {
+        foreach ($this->parquetReader->readEvents($organizationId, $projectId, WideEventSchema::EVENT_TYPE_SPAN) as $span) {
             if (($span['trace_id'] ?? null) === $traceId) {
                 $spans[] = $span;
             }
@@ -132,9 +148,10 @@ class OtelDataService
         int $limit = 50,
         int $offset = 0,
     ): array {
+        $organizationId = $this->getOrganizationId($projectId);
         $logs = [];
 
-        foreach ($this->parquetReader->readEvents(null, $projectId, WideEventSchema::EVENT_TYPE_LOG, $from, $to) as $log) {
+        foreach ($this->parquetReader->readEvents($organizationId, $projectId, WideEventSchema::EVENT_TYPE_LOG, $from, $to) as $log) {
             // Apply severity filter
             if (null !== $severity && '' !== $severity) {
                 if (($log['severity'] ?? null) !== $severity) {
@@ -167,7 +184,9 @@ class OtelDataService
      */
     public function getLog(string $projectId, string $eventId): ?array
     {
-        foreach ($this->parquetReader->readEvents(null, $projectId, WideEventSchema::EVENT_TYPE_LOG) as $log) {
+        $organizationId = $this->getOrganizationId($projectId);
+
+        foreach ($this->parquetReader->readEvents($organizationId, $projectId, WideEventSchema::EVENT_TYPE_LOG) as $log) {
             if (($log['event_id'] ?? null) === $eventId) {
                 return $log;
             }
@@ -189,9 +208,10 @@ class OtelDataService
         int $limit = 50,
         int $offset = 0,
     ): array {
+        $organizationId = $this->getOrganizationId($projectId);
         $metrics = [];
 
-        foreach ($this->parquetReader->readEvents(null, $projectId, WideEventSchema::EVENT_TYPE_METRIC, $from, $to) as $metric) {
+        foreach ($this->parquetReader->readEvents($organizationId, $projectId, WideEventSchema::EVENT_TYPE_METRIC, $from, $to) as $metric) {
             // Apply metric name filter
             if (null !== $metricName && '' !== $metricName) {
                 if (($metric['metric_name'] ?? null) !== $metricName) {
@@ -216,9 +236,10 @@ class OtelDataService
      */
     public function getMetricNames(string $projectId): array
     {
+        $organizationId = $this->getOrganizationId($projectId);
         $names = [];
 
-        foreach ($this->parquetReader->readEvents(null, $projectId, WideEventSchema::EVENT_TYPE_METRIC) as $metric) {
+        foreach ($this->parquetReader->readEvents($organizationId, $projectId, WideEventSchema::EVENT_TYPE_METRIC) as $metric) {
             $name = $metric['metric_name'] ?? null;
             if (null !== $name && !in_array($name, $names, true)) {
                 $names[] = $name;

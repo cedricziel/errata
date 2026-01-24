@@ -104,11 +104,12 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
         $traceId = Uuid::v4()->toRfc4122();
-        $this->createTestSpan($projectId, $traceId, 'root-span', 'GET /api/users', null);
-        $this->createTestSpan($projectId, $traceId, 'child-span', 'database.query', 'root-span');
+        $this->createTestSpan($organizationId, $projectId, $traceId, 'root-span', 'GET /api/users', null);
+        $this->createTestSpan($organizationId, $projectId, $traceId, 'child-span', 'database.query', 'root-span');
 
         $this->browser()
             ->actingAs($user)
@@ -122,11 +123,12 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
         $traceId = Uuid::v4()->toRfc4122();
-        $this->createTestSpan($projectId, $traceId, 'root-span', 'GET /api/users', null, 100.0);
-        $this->createTestSpan($projectId, $traceId, 'child-span', 'database.query', 'root-span', 50.0);
+        $this->createTestSpan($organizationId, $projectId, $traceId, 'root-span', 'GET /api/users', null, 100.0);
+        $this->createTestSpan($organizationId, $projectId, $traceId, 'child-span', 'database.query', 'root-span', 50.0);
 
         $this->browser()
             ->actingAs($user)
@@ -154,10 +156,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
         $traceId = Uuid::v4()->toRfc4122();
-        $this->createTestSpan($projectId, $traceId, 'root-span', 'GET /api/users', null);
+        $this->createTestSpan($organizationId, $projectId, $traceId, 'root-span', 'GET /api/users', null);
 
         $from = date('Y-m-d\TH:i', strtotime('-1 hour'));
         $to = date('Y-m-d\TH:i', strtotime('+1 hour'));
@@ -188,10 +191,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
-        $this->createTestLog($projectId, 'User logged in successfully', 'info');
-        $this->createTestLog($projectId, 'Failed to connect to database', 'error');
+        $this->createTestLog($organizationId, $projectId, 'User logged in successfully', 'info');
+        $this->createTestLog($organizationId, $projectId, 'Failed to connect to database', 'error');
 
         $this->browser()
             ->actingAs($user)
@@ -206,10 +210,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
-        $this->createTestLog($projectId, 'Info message', 'info');
-        $this->createTestLog($projectId, 'Error message', 'error');
+        $this->createTestLog($organizationId, $projectId, 'Info message', 'info');
+        $this->createTestLog($organizationId, $projectId, 'Error message', 'error');
 
         $this->browser()
             ->actingAs($user)
@@ -223,10 +228,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
-        $this->createTestLog($projectId, 'User authentication successful', 'info');
-        $this->createTestLog($projectId, 'Database connection failed', 'error');
+        $this->createTestLog($organizationId, $projectId, 'User authentication successful', 'info');
+        $this->createTestLog($organizationId, $projectId, 'Database connection failed', 'error');
 
         $this->browser()
             ->actingAs($user)
@@ -240,10 +246,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
         $eventId = Uuid::v4()->toRfc4122();
-        $this->createTestLog($projectId, 'Detailed log message for testing', 'warning', $eventId);
+        $this->createTestLog($organizationId, $projectId, 'Detailed log message for testing', 'warning', $eventId);
 
         $this->browser()
             ->actingAs($user)
@@ -270,11 +277,12 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
         $eventId = Uuid::v4()->toRfc4122();
         $traceId = Uuid::v4()->toRfc4122();
-        $this->createTestLog($projectId, 'Log with trace correlation', 'info', $eventId, $traceId);
+        $this->createTestLog($organizationId, $projectId, 'Log with trace correlation', 'info', $eventId, $traceId);
 
         $this->browser()
             ->actingAs($user)
@@ -303,10 +311,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
-        $this->createTestMetric($projectId, 'http.request.duration', 150.5, 'ms');
-        $this->createTestMetric($projectId, 'memory.usage', 1024000.0, 'bytes');
+        $this->createTestMetric($organizationId, $projectId, 'http.request.duration', 150.5, 'ms');
+        $this->createTestMetric($organizationId, $projectId, 'memory.usage', 1024000.0, 'bytes');
 
         $this->browser()
             ->actingAs($user)
@@ -321,10 +330,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     {
         $user = $this->createTestUser();
         $project = $this->createTestProject($user);
+        $organizationId = $project->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project->getPublicId()->toRfc4122();
 
-        $this->createTestMetric($projectId, 'http.request.duration', 150.5, 'ms');
-        $this->createTestMetric($projectId, 'memory.usage', 1024000.0, 'bytes');
+        $this->createTestMetric($organizationId, $projectId, 'http.request.duration', 150.5, 'ms');
+        $this->createTestMetric($organizationId, $projectId, 'memory.usage', 1024000.0, 'bytes');
 
         $this->browser()
             ->actingAs($user)
@@ -342,10 +352,11 @@ class OtelControllerTest extends AbstractIntegrationTestCase
         $user2 = $this->createTestUser('user2@example.com');
 
         $project1 = $this->createTestProject($user1);
+        $organizationId = $project1->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project1->getPublicId()->toRfc4122();
 
         $traceId = Uuid::v4()->toRfc4122();
-        $this->createTestSpan($projectId, $traceId, 'root-span', 'GET /api/users', null);
+        $this->createTestSpan($organizationId, $projectId, $traceId, 'root-span', 'GET /api/users', null);
 
         // user2 should not have access to user1's project
         $this->browser()
@@ -360,9 +371,10 @@ class OtelControllerTest extends AbstractIntegrationTestCase
         $user2 = $this->createTestUser('user2@example.com');
 
         $project1 = $this->createTestProject($user1);
+        $organizationId = $project1->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project1->getPublicId()->toRfc4122();
 
-        $this->createTestLog($projectId, 'Secret log message', 'info');
+        $this->createTestLog($organizationId, $projectId, 'Secret log message', 'info');
 
         // user2 should not have access to user1's project
         $this->browser()
@@ -377,9 +389,10 @@ class OtelControllerTest extends AbstractIntegrationTestCase
         $user2 = $this->createTestUser('user2@example.com');
 
         $project1 = $this->createTestProject($user1);
+        $organizationId = $project1->getOrganization()->getPublicId()->toRfc4122();
         $projectId = $project1->getPublicId()->toRfc4122();
 
-        $this->createTestMetric($projectId, 'secret.metric', 42.0, 'count');
+        $this->createTestMetric($organizationId, $projectId, 'secret.metric', 42.0, 'count');
 
         // user2 should not have access to user1's project
         $this->browser()
@@ -402,6 +415,7 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     // ==================== Helper Methods ====================
 
     private function createTestSpan(
+        string $organizationId,
         string $projectId,
         string $traceId,
         string $spanId,
@@ -413,6 +427,7 @@ class OtelControllerTest extends AbstractIntegrationTestCase
         $event = [
             'event_id' => Uuid::v4()->toRfc4122(),
             'timestamp' => (int) (microtime(true) * 1000),
+            'organization_id' => $organizationId,
             'project_id' => $projectId,
             'event_type' => WideEventSchema::EVENT_TYPE_SPAN,
             'trace_id' => $traceId,
@@ -427,6 +442,7 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     }
 
     private function createTestLog(
+        string $organizationId,
         string $projectId,
         string $message,
         string $severity = 'info',
@@ -436,6 +452,7 @@ class OtelControllerTest extends AbstractIntegrationTestCase
         $event = [
             'event_id' => $eventId ?? Uuid::v4()->toRfc4122(),
             'timestamp' => (int) (microtime(true) * 1000),
+            'organization_id' => $organizationId,
             'project_id' => $projectId,
             'event_type' => WideEventSchema::EVENT_TYPE_LOG,
             'message' => $message,
@@ -448,6 +465,7 @@ class OtelControllerTest extends AbstractIntegrationTestCase
     }
 
     private function createTestMetric(
+        string $organizationId,
         string $projectId,
         string $metricName,
         float $value,
@@ -456,6 +474,7 @@ class OtelControllerTest extends AbstractIntegrationTestCase
         $event = [
             'event_id' => Uuid::v4()->toRfc4122(),
             'timestamp' => (int) (microtime(true) * 1000),
+            'organization_id' => $organizationId,
             'project_id' => $projectId,
             'event_type' => WideEventSchema::EVENT_TYPE_METRIC,
             'metric_name' => $metricName,
