@@ -28,6 +28,15 @@ framework:
                     max_retries: 3
                     multiplier: 2
 
+            # Parquet compaction - memory intensive, separate worker
+            async_compaction:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    stream: async_compaction
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+
             failed: 'doctrine://default?queue_name=failed'
 
         default_bus: messenger.bus.default
@@ -53,7 +62,7 @@ framework:
             App\Message\ComputeFacetBatch: async_query
 
             # Scheduled tasks - compaction, maintenance
-            App\Message\CompactParquet: async
+            App\Message\CompactParquet: async_compaction
 
 when@test:
     framework:
@@ -62,3 +71,4 @@ when@test:
                 async: 'test://'
                 async_query: 'test://'
                 async_events: 'test://'
+                async_compaction: 'test://'
