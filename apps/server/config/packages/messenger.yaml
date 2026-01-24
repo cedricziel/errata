@@ -83,8 +83,11 @@ when@prod:
                     options:
                         stream: async
                         group: async
+                        consumer: '%env(HOSTNAME)%'
                         delete_after_ack: false
                         delete_after_reject: false
+                        redeliver_timeout: 600
+                        claim_interval: 300000
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
@@ -94,8 +97,11 @@ when@prod:
                     options:
                         stream: async_query
                         group: async_query
+                        consumer: '%env(HOSTNAME)%'
                         delete_after_ack: false
                         delete_after_reject: false
+                        redeliver_timeout: 600
+                        claim_interval: 300000
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
@@ -105,8 +111,11 @@ when@prod:
                     options:
                         stream: async_events
                         group: async_events
+                        consumer: '%env(HOSTNAME)%'
                         delete_after_ack: false
                         delete_after_reject: false
+                        redeliver_timeout: 600
+                        claim_interval: 300000
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
@@ -116,8 +125,11 @@ when@prod:
                     options:
                         stream: async_compaction
                         group: async_compaction
+                        consumer: '%env(HOSTNAME)%'
                         delete_after_ack: false
                         delete_after_reject: false
+                        redeliver_timeout: 1800
+                        claim_interval: 600000
                     retry_strategy:
                         max_retries: 3
                         multiplier: 2
@@ -128,8 +140,11 @@ when@prod:
                     options:
                         stream: scheduler_default
                         group: scheduler_default
+                        consumer: '%env(HOSTNAME)%'
                         delete_after_ack: false
                         delete_after_reject: false
+                        redeliver_timeout: 600
+                        claim_interval: 300000
 
                 failed: 'doctrine://default?queue_name=failed'
 
