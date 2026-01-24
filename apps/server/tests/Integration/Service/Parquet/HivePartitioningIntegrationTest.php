@@ -311,6 +311,147 @@ class HivePartitioningIntegrationTest extends KernelTestCase
         $this->assertSame('col-event-day2', $events[0]['message']);
     }
 
+    public function testReadEventsWithColumnsUsesOrganizationPartitionPruning(): void
+    {
+        $org1 = 'org-1-'.Uuid::v7();
+        $org2 = 'org-2-'.Uuid::v7();
+        $projectId = 'proj-'.Uuid::v7();
+        $timestamp = time() * 1000;
+        $date = new \DateTimeImmutable('now');
+
+        // Create events in two different organizations
+        $this->writer->writeEvents([$this->createEvent($org1, $projectId, 'log', $timestamp, 'Org 1 secret data')]);
+        $this->writer->writeEvents([$this->createEvent($org2, $projectId, 'log', $timestamp, 'Org 2 secret data')]);
+
+        // Query only org1 using readEventsWithColumns
+        $events = iterator_to_array($this->reader->readEventsWithColumns(
+            organizationId: $org1,
+            projectId: $projectId,
+            from: $date,
+            to: $date,
+            columns: ['event_id', 'message', 'organization_id'],
+        ));
+
+        // Should return only org1's event
+        $this->assertCount(1, $events);
+        $this->assertSame('Org 1 secret data', $events[0]['message']);
+        $this->assertSame($org1, $events[0]['organization_id']);
+    }
+
+    public function testReadEventsWithColumnsUsesProjectPartitionPruning(): void
+    {
+        $orgId = 'org-'.Uuid::v7();
+        $proj1 = 'proj-1-'.Uuid::v7();
+        $proj2 = 'proj-2-'.Uuid::v7();
+        $timestamp = time() * 1000;
+        $date = new \DateTimeImmutable('now');
+
+        // Create events in two different projects
+        $this->writer->writeEvents([$this->createEvent($orgId, $proj1, 'log', $timestamp, 'Project 1 data')]);
+        $this->writer->writeEvents([$this->createEvent($orgId, $proj2, 'log', $timestamp, 'Project 2 data')]);
+
+        // Query only proj1 using readEventsWithColumns
+        $events = iterator_to_array($this->reader->readEventsWithColumns(
+            organizationId: $orgId,
+            projectId: $proj1,
+            from: $date,
+            to: $date,
+            columns: ['event_id', 'message', 'project_id'],
+        ));
+
+        // Should return only proj1's event
+        $this->assertCount(1, $events);
+        $this->assertSame('Project 1 data', $events[0]['message']);
+        $this->assertSame($proj1, $events[0]['project_id']);
+    }
+
+    public function testReadEventsWithColumnsIsolatesOrganizations(): void
+    {
+        $org1 = 'org-isolated-1-'.Uuid::v7();
+        $org2 = 'org-isolated-2-'.Uuid::v7();
+        $proj1 = 'proj-'.Uuid::v7();
+        $proj2 = 'proj-'.Uuid::v7();
+
+        // Create events across multiple orgs and projects on multiple days
+        $day1 = new \DateTimeImmutable('2024-02-10 10:00:00');
+        $day2 = new \DateTimeImmutable('2024-02-11 10:00:00');
+
+        // Org1 events
+        $this->writer->writeEvents([$this->createEvent($org1, $proj1, 'log', $day1->getTimestamp() * 1000, 'org1-proj1-day1')]);
+        $this->writer->writeEvents([$this->createEvent($org1, $proj1, 'log', $day2->getTimestamp() * 1000, 'org1-proj1-day2')]);
+
+        // Org2 events (should never be returned when querying org1)
+        $this->writer->writeEvents([$this->createEvent($org2, $proj2, 'log', $day1->getTimestamp() * 1000, 'org2-proj2-day1')]);
+        $this->writer->writeEvents([$this->createEvent($org2, $proj2, 'log', $day2->getTimestamp() * 1000, 'org2-proj2-day2')]);
+
+        // Query org1 across both days
+        $events = iterator_to_array($this->reader->readEventsWithColumns(
+            organizationId: $org1,
+            projectId: $proj1,
+            from: $day1,
+            to: $day2,
+            columns: ['event_id', 'message', 'organization_id', 'project_id'],
+        ));
+
+        // Should return exactly 2 events from org1
+        $this->assertCount(2, $events);
+
+        $messages = array_column($events, 'message');
+        $this->assertContains('org1-proj1-day1', $messages);
+        $this->assertContains('org1-proj1-day2', $messages);
+
+        // Verify no org2 data leaked
+        $this->assertNotContains('org2-proj2-day1', $messages);
+        $this->assertNotContains('org2-proj2-day2', $messages);
+
+        // Verify all returned events are from org1
+        foreach ($events as $event) {
+            $this->assertSame($org1, $event['organization_id']);
+            $this->assertSame($proj1, $event['project_id']);
+        }
+    }
+
+    public function testReadEventsWithColumnsCombinesAllPartitionFilters(): void
+    {
+        $targetOrg = 'target-org-'.Uuid::v7();
+        $targetProj = 'target-proj-'.Uuid::v7();
+        $otherOrg = 'other-org-'.Uuid::v7();
+        $otherProj = 'other-proj-'.Uuid::v7();
+
+        $targetDate = new \DateTimeImmutable('2024-03-15 12:00:00');
+        $otherDate = new \DateTimeImmutable('2024-03-16 12:00:00');
+
+        // Create the target event
+        $this->writer->writeEvents([$this->createEvent(
+            $targetOrg,
+            $targetProj,
+            'log',
+            $targetDate->getTimestamp() * 1000,
+            'TARGET'
+        )]);
+
+        // Create noise events in various partitions
+        $this->writer->writeEvents([$this->createEvent($otherOrg, $targetProj, 'log', $targetDate->getTimestamp() * 1000, 'wrong-org')]);
+        $this->writer->writeEvents([$this->createEvent($targetOrg, $otherProj, 'log', $targetDate->getTimestamp() * 1000, 'wrong-proj')]);
+        $this->writer->writeEvents([$this->createEvent($targetOrg, $targetProj, 'log', $otherDate->getTimestamp() * 1000, 'wrong-date')]);
+        $this->writer->writeEvents([$this->createEvent($otherOrg, $otherProj, 'log', $otherDate->getTimestamp() * 1000, 'all-wrong')]);
+
+        // Query with all partition filters
+        $events = iterator_to_array($this->reader->readEventsWithColumns(
+            organizationId: $targetOrg,
+            projectId: $targetProj,
+            from: $targetDate,
+            to: $targetDate,
+            columns: ['event_id', 'message', 'organization_id', 'project_id', 'timestamp'],
+        ));
+
+        // Should return exactly 1 event - the target
+        $this->assertCount(1, $events);
+        $this->assertSame('TARGET', $events[0]['message']);
+        $this->assertSame($targetOrg, $events[0]['organization_id']);
+        $this->assertSame($targetProj, $events[0]['project_id']);
+    }
+
     public function testPartitionDirectoryStructure(): void
     {
         $orgId = 'org-structure-test';
