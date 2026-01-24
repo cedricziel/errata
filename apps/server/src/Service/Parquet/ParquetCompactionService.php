@@ -30,6 +30,8 @@ use function Flow\Filesystem\DSL\path;
  * Finds partitions with uncompacted event files (events_*.parquet) and merges them
  * into larger block files (block_*.parquet) for improved read performance.
  * Works with both local filesystem and S3-compatible storage.
+ *
+ * Uses batched processing to avoid memory issues when listing large numbers of files.
  */
 final class ParquetCompactionService
 {
@@ -37,6 +39,11 @@ final class ParquetCompactionService
      * Maximum size per compacted parquet file (50MB).
      */
     private const MAX_BLOCK_SIZE_BYTES = 50 * 1024 * 1024;
+
+    /**
+     * Maximum files to process in one batch to avoid memory issues.
+     */
+    private const MAX_FILES_PER_BATCH = 100;
 
     public function __construct(
         private readonly StorageFactory $storageFactory,
@@ -48,6 +55,9 @@ final class ParquetCompactionService
 
     /**
      * Run compaction on all partitions matching the given filters.
+     *
+     * When filters are not specified, iterates through organizations and projects
+     * in batches to avoid loading all files into memory at once.
      */
     public function compact(
         ?string $organizationId = null,
@@ -56,17 +66,7 @@ final class ParquetCompactionService
         ?string $date = null,
         bool $dryRun = false,
     ): CompactionSummary {
-        $partitions = $this->findPartitionsForCompaction(
-            $organizationId,
-            $projectId,
-            $eventType,
-            $date
-        );
-
-        if (empty($partitions)) {
-            return new CompactionSummary(0, 0, 0, 0, 0, 0);
-        }
-
+        $totalPartitionsFound = 0;
         $totalCompacted = 0;
         $totalFilesRemoved = 0;
         $totalBlocksCreated = 0;
@@ -74,7 +74,15 @@ final class ParquetCompactionService
         $errors = 0;
         $results = [];
 
-        foreach ($partitions as $partition) {
+        // If specific filters are provided, use direct lookup
+        if (null !== $organizationId && null !== $projectId && null !== $eventType && null !== $date) {
+            return $this->compactSinglePartition($organizationId, $projectId, $eventType, $date, $dryRun);
+        }
+
+        // Otherwise, iterate in batches to avoid memory issues
+        foreach ($this->iteratePartitions($organizationId, $projectId, $eventType, $date) as $partition) {
+            ++$totalPartitionsFound;
+
             if ($dryRun) {
                 continue;
             }
@@ -93,7 +101,7 @@ final class ParquetCompactionService
         }
 
         return new CompactionSummary(
-            count($partitions),
+            $totalPartitionsFound,
             $totalCompacted,
             $totalBlocksCreated,
             $totalFilesRemoved,
@@ -104,7 +112,216 @@ final class ParquetCompactionService
     }
 
     /**
+     * Iterate through partitions in a memory-efficient way.
+     *
+     * Lists directories level by level (org -> project -> event_type -> date)
+     * to avoid loading all file listings at once.
+     *
+     * @return \Generator<array{path: string, files: array<string>}>
+     */
+    private function iteratePartitions(
+        ?string $organizationId = null,
+        ?string $projectId = null,
+        ?string $eventType = null,
+        ?string $date = null,
+    ): \Generator {
+        $basePath = $this->storageFactory->getBasePath();
+        $fstab = $this->storageFactory->createFilesystemTable();
+        $filesystem = $fstab->for(path($basePath)->protocol());
+
+        // Get organizations to process
+        $organizations = null !== $organizationId
+            ? ["organization_id={$organizationId}"]
+            : $this->listDirectories($filesystem, $basePath, 'organization_id=');
+
+        foreach ($organizations as $orgDir) {
+            $orgPath = rtrim($basePath, '/').'/'.$orgDir;
+
+            // Get projects to process
+            $projects = null !== $projectId
+                ? ["project_id={$projectId}"]
+                : $this->listDirectories($filesystem, $orgPath, 'project_id=');
+
+            foreach ($projects as $projDir) {
+                $projPath = $orgPath.'/'.$projDir;
+
+                // Get event types to process
+                $eventTypes = null !== $eventType
+                    ? ["event_type={$eventType}"]
+                    : $this->listDirectories($filesystem, $projPath, 'event_type=');
+
+                foreach ($eventTypes as $typeDir) {
+                    $typePath = $projPath.'/'.$typeDir;
+
+                    // Get dates to process
+                    $dates = null !== $date
+                        ? ["dt={$date}"]
+                        : $this->listDirectories($filesystem, $typePath, 'dt=');
+
+                    foreach ($dates as $dateDir) {
+                        $partitionPath = $typePath.'/'.$dateDir;
+
+                        // List files in this specific partition
+                        $files = $this->listPartitionFiles($filesystem, $partitionPath);
+
+                        if (!empty($files)) {
+                            yield [
+                                'path' => $partitionPath,
+                                'files' => $files,
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * List directories matching a prefix at a given path.
+     *
+     * @return array<string>
+     */
+    private function listDirectories(Filesystem $filesystem, string $parentPath, string $prefix): array
+    {
+        $dirs = [];
+
+        try {
+            // For local filesystem, use native PHP glob for reliable directory listing
+            if (!$this->storageFactory->isS3Storage()) {
+                $pattern = rtrim($parentPath, '/').'/'.$prefix.'*';
+                $matches = glob($pattern, GLOB_ONLYDIR);
+                if (false !== $matches) {
+                    foreach ($matches as $match) {
+                        $dirs[] = basename($match);
+                    }
+                }
+
+                return array_unique($dirs);
+            }
+
+            // For S3, use filesystem list with prefix filtering
+            // S3 doesn't support glob patterns, so we list with prefix and filter
+            foreach ($filesystem->list(path($parentPath.'/')) as $fileStatus) {
+                $name = basename($fileStatus->path->path());
+                if (str_starts_with($name, $prefix)) {
+                    $dirs[] = $name;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->debug('Failed to list directories', [
+                'path' => $parentPath,
+                'prefix' => $prefix,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return array_unique($dirs);
+    }
+
+    /**
+     * List parquet files in a specific partition that need compaction.
+     *
+     * @return array<string>
+     */
+    private function listPartitionFiles(Filesystem $filesystem, string $partitionPath): array
+    {
+        $files = [];
+
+        try {
+            // For local filesystem, use native PHP glob
+            if (!$this->storageFactory->isS3Storage()) {
+                $pattern = rtrim($partitionPath, '/').'/events_*.parquet';
+                $matches = glob($pattern);
+                if (false !== $matches) {
+                    foreach ($matches as $match) {
+                        $files[] = $match;
+                        if (count($files) >= self::MAX_FILES_PER_BATCH) {
+                            break;
+                        }
+                    }
+                }
+
+                sort($files);
+
+                return $files;
+            }
+
+            // For S3, list all files in directory and filter
+            foreach ($filesystem->list(path($partitionPath.'/')) as $fileStatus) {
+                $fileName = basename($fileStatus->path->path());
+
+                // Only include uncompacted event files (not block_*.parquet)
+                if (str_starts_with($fileName, 'events_') && str_ends_with($fileName, '.parquet')) {
+                    $files[] = $fileStatus->path->path();
+                }
+
+                // Limit files per batch to avoid memory issues
+                if (count($files) >= self::MAX_FILES_PER_BATCH) {
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->debug('Failed to list partition files', [
+                'partition' => $partitionPath,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        sort($files);
+
+        return $files;
+    }
+
+    /**
+     * Compact a single fully-specified partition.
+     */
+    private function compactSinglePartition(
+        string $organizationId,
+        string $projectId,
+        string $eventType,
+        string $date,
+        bool $dryRun,
+    ): CompactionSummary {
+        $basePath = $this->storageFactory->getBasePath();
+        $fstab = $this->storageFactory->createFilesystemTable();
+        $filesystem = $fstab->for(path($basePath)->protocol());
+
+        $partitionPath = sprintf(
+            '%s/organization_id=%s/project_id=%s/event_type=%s/dt=%s',
+            rtrim($basePath, '/'),
+            $organizationId,
+            $projectId,
+            $eventType,
+            $date
+        );
+
+        $files = $this->listPartitionFiles($filesystem, $partitionPath);
+
+        if (empty($files)) {
+            return new CompactionSummary(0, 0, 0, 0, 0, 0);
+        }
+
+        if ($dryRun) {
+            return new CompactionSummary(1, 0, 0, 0, 0, 0);
+        }
+
+        $result = $this->compactPartition($partitionPath, $files);
+
+        return new CompactionSummary(
+            1,
+            $result->success ? 1 : 0,
+            count($result->outputFiles),
+            $result->filesRemoved,
+            $result->eventsCount,
+            $result->success ? 0 : 1,
+            [$result]
+        );
+    }
+
+    /**
      * Find partitions that have uncompacted event files.
+     *
+     * @deprecated Use iteratePartitions() for memory-efficient processing
      *
      * @return array<array{path: string, files: array<string>}>
      */
@@ -114,51 +331,10 @@ final class ParquetCompactionService
         ?string $eventType = null,
         ?string $date = null,
     ): array {
-        $basePath = $this->storageFactory->getBasePath();
-        $fstab = $this->storageFactory->createFilesystemTable();
-
-        $globPattern = $this->buildGlobPattern($basePath, $organizationId, $projectId, $eventType, $date);
-
-        $this->logger->debug('Searching for uncompacted files', ['pattern' => $globPattern]);
-
-        $filesystem = $fstab->for(path($basePath)->protocol());
-
-        $partitionFiles = [];
-
-        try {
-            /** @var \Flow\Filesystem\FileStatus $fileStatus */
-            foreach ($filesystem->list(path($globPattern)) as $fileStatus) {
-                $filePath = $fileStatus->path->path();
-                $fileName = basename($filePath);
-
-                // Only include uncompacted event files (not block_*.parquet)
-                if (!str_starts_with($fileName, 'events_')) {
-                    continue;
-                }
-
-                $partitionPath = dirname($filePath);
-
-                if (!isset($partitionFiles[$partitionPath])) {
-                    $partitionFiles[$partitionPath] = [];
-                }
-                $partitionFiles[$partitionPath][] = $filePath;
-            }
-        } catch (\Throwable $e) {
-            $this->logger->warning('Failed to list files for compaction', [
-                'pattern' => $globPattern,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [];
-        }
-
         $partitions = [];
-        foreach ($partitionFiles as $path => $files) {
-            sort($files);
-            $partitions[] = [
-                'path' => $path,
-                'files' => $files,
-            ];
+
+        foreach ($this->iteratePartitions($organizationId, $projectId, $eventType, $date) as $partition) {
+            $partitions[] = $partition;
         }
 
         return $partitions;
@@ -251,25 +427,6 @@ final class ParquetCompactionService
     public function getStorageType(): string
     {
         return $this->storageFactory->getStorageType();
-    }
-
-    private function buildGlobPattern(
-        string $basePath,
-        ?string $organizationId,
-        ?string $projectId,
-        ?string $eventType,
-        ?string $date,
-    ): string {
-        if (!str_ends_with($basePath, '/') && !str_contains($basePath, '://')) {
-            $basePath .= '/';
-        }
-
-        $orgPart = $organizationId ? "organization_id={$organizationId}" : 'organization_id=*';
-        $projPart = $projectId ? "project_id={$projectId}" : 'project_id=*';
-        $typePart = $eventType ? "event_type={$eventType}" : 'event_type=*';
-        $datePart = $date ? "dt={$date}" : 'dt=*';
-
-        return "{$basePath}{$orgPart}/{$projPart}/{$typePart}/{$datePart}/*.parquet";
     }
 
     /**
