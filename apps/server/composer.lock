@@ -5207,16 +5207,16 @@
         },
         {
             "name": "symfony/doctrine-messenger",
-            "version": "v8.0.3",
+            "version": "v8.0.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/doctrine-messenger.git",
-                "reference": "08be96096e507c0cb03c1e0a0ad95b24f182840a"
+                "reference": "88329a3faba5023cfb569b3fc5b8a771336c4a88"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/doctrine-messenger/zipball/08be96096e507c0cb03c1e0a0ad95b24f182840a",
-                "reference": "08be96096e507c0cb03c1e0a0ad95b24f182840a",
+                "url": "https://api.github.com/repos/symfony/doctrine-messenger/zipball/88329a3faba5023cfb569b3fc5b8a771336c4a88",
+                "reference": "88329a3faba5023cfb569b3fc5b8a771336c4a88",
                 "shasum": ""
             },
             "require": {
@@ -5259,7 +5259,7 @@
             "description": "Symfony Doctrine Messenger Bridge",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/doctrine-messenger/tree/v8.0.3"
+                "source": "https://github.com/symfony/doctrine-messenger/tree/v8.0.6"
             },
             "funding": [
                 {
@@ -5279,7 +5279,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-12-16T08:10:18+00:00"
+            "time": "2026-02-20T07:51:53+00:00"
         },
         {
             "name": "symfony/dotenv",
@@ -6721,16 +6721,16 @@
         },
         {
             "name": "symfony/messenger",
-            "version": "v8.0.3",
+            "version": "v8.0.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/messenger.git",
-                "reference": "b56b89aee16ceb623f76c8739ab62202ec198190"
+                "reference": "4be925bf0155d6435d2cdfa63d5ffd277c44ac10"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/messenger/zipball/b56b89aee16ceb623f76c8739ab62202ec198190",
-                "reference": "b56b89aee16ceb623f76c8739ab62202ec198190",
+                "url": "https://api.github.com/repos/symfony/messenger/zipball/4be925bf0155d6435d2cdfa63d5ffd277c44ac10",
+                "reference": "4be925bf0155d6435d2cdfa63d5ffd277c44ac10",
                 "shasum": ""
             },
             "require": {
@@ -6740,7 +6740,9 @@
             },
             "conflict": {
                 "symfony/console": "<7.4",
-                "symfony/event-dispatcher-contracts": "<2.5"
+                "symfony/event-dispatcher-contracts": "<2.5",
+                "symfony/lock": "<7.4",
+                "symfony/serializer": "<7.4.4|>=8.0,<8.0.4"
             },
             "require-dev": {
                 "psr/cache": "^1.0|^2.0|^3.0",
@@ -6753,7 +6755,7 @@
                 "symfony/property-access": "^7.4|^8.0",
                 "symfony/rate-limiter": "^7.4|^8.0",
                 "symfony/routing": "^7.4|^8.0",
-                "symfony/serializer": "^7.4|^8.0",
+                "symfony/serializer": "^7.4.4|^8.0.4",
                 "symfony/service-contracts": "^2.5|^3",
                 "symfony/stopwatch": "^7.4|^8.0",
                 "symfony/validator": "^7.4|^8.0",
@@ -6785,7 +6787,7 @@
             "description": "Helps applications send and receive messages to/from other applications or via message queues",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/messenger/tree/v8.0.3"
+                "source": "https://github.com/symfony/messenger/tree/v8.0.6"
             },
             "funding": [
                 {
@@ -6805,7 +6807,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-12-23T14:52:06+00:00"
+            "time": "2026-02-25T16:59:43+00:00"
         },
         {
             "name": "symfony/mime",
