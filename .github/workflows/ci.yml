@@ -218,7 +218,7 @@ jobs:
             type=ref,event=pr
 
       - name: Build and push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: apps/server
           file: apps/server/Dockerfile
