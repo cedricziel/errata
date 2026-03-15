@@ -26,7 +26,7 @@ return [
         'version' => '3.2.2',
     ],
     '@hotwired/turbo' => [
-        'version' => '8.0.21',
+        'version' => '8.0.23',
     ],
     'chart.js' => [
         'version' => '4.5.1',
@@ -35,58 +35,58 @@ return [
         'version' => '1.9.0',
     ],
     '@opentelemetry/core' => [
-        'version' => '2.5.0',
+        'version' => '2.6.0',
     ],
     '@opentelemetry/resources' => [
-        'version' => '2.5.0',
+        'version' => '2.6.0',
     ],
     '@opentelemetry/semantic-conventions' => [
-        'version' => '1.39.0',
+        'version' => '1.40.0',
     ],
     '@opentelemetry/sdk-trace-base' => [
-        'version' => '2.5.0',
+        'version' => '2.6.0',
     ],
     '@opentelemetry/sdk-trace-web' => [
-        'version' => '2.5.0',
+        'version' => '2.6.0',
     ],
     '@opentelemetry/exporter-trace-otlp-http' => [
-        'version' => '0.211.0',
+        'version' => '0.213.0',
     ],
     '@opentelemetry/otlp-exporter-base' => [
-        'version' => '0.211.0',
+        'version' => '0.213.0',
     ],
     '@opentelemetry/otlp-exporter-base/browser-http' => [
-        'version' => '0.211.0',
+        'version' => '0.213.0',
     ],
     '@opentelemetry/otlp-transformer' => [
-        'version' => '0.211.0',
+        'version' => '0.213.0',
     ],
     'protobufjs/minimal' => [
         'version' => '8.0.0',
     ],
     '@opentelemetry/instrumentation' => [
-        'version' => '0.211.0',
+        'version' => '0.213.0',
     ],
     '@opentelemetry/instrumentation-fetch' => [
-        'version' => '0.211.0',
+        'version' => '0.213.0',
     ],
     '@opentelemetry/instrumentation-document-load' => [
-        'version' => '0.56.0',
+        'version' => '0.58.0',
     ],
     '@opentelemetry/context-zone' => [
-        'version' => '2.5.0',
+        'version' => '2.6.0',
     ],
     '@opentelemetry/context-zone-peer-dep' => [
-        'version' => '2.5.0',
+        'version' => '2.6.0',
     ],
     '@opentelemetry/api-logs' => [
-        'version' => '0.211.0',
+        'version' => '0.213.0',
     ],
     '@opentelemetry/sdk-metrics' => [
-        'version' => '2.5.0',
+        'version' => '2.6.0',
     ],
     'zone.js' => [
-        'version' => '0.16.0',
+        'version' => '0.16.1',
     ],
     '@protobufjs/aspromise' => [
         'version' => '1.1.2',
