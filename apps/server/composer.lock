@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "24878bf44f2ec014a1b21e4a93c09060",
+    "content-hash": "e8a30be10718fefb42d9e0c87999dafa",
     "packages": [
         {
             "name": "api-platform/core",
@@ -650,16 +650,16 @@
         },
         {
             "name": "doctrine/dbal",
-            "version": "4.4.2",
+            "version": "4.4.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/dbal.git",
-                "reference": "476f7f0fa6ea4aa5364926db7fabdf6049075722"
+                "reference": "61e730f1658814821a85f2402c945f3883407dec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/dbal/zipball/476f7f0fa6ea4aa5364926db7fabdf6049075722",
-                "reference": "476f7f0fa6ea4aa5364926db7fabdf6049075722",
+                "url": "https://api.github.com/repos/doctrine/dbal/zipball/61e730f1658814821a85f2402c945f3883407dec",
+                "reference": "61e730f1658814821a85f2402c945f3883407dec",
                 "shasum": ""
             },
             "require": {
@@ -736,7 +736,7 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/dbal/issues",
-                "source": "https://github.com/doctrine/dbal/tree/4.4.2"
+                "source": "https://github.com/doctrine/dbal/tree/4.4.3"
             },
             "funding": [
                 {
@@ -752,7 +752,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-02-26T12:12:19+00:00"
+            "time": "2026-03-20T08:52:12+00:00"
         },
         {
             "name": "doctrine/deprecations",
@@ -2949,16 +2949,16 @@
         },
         {
             "name": "open-telemetry/opentelemetry-auto-doctrine",
-            "version": "0.3.1",
+            "version": "0.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/opentelemetry-php/contrib-auto-doctrine.git",
-                "reference": "7df322cd9717f7b8ce86dc32b6828441ee1cd8f2"
+                "reference": "c8a71845fe4c0fa0315ff78e57aa4631c4ec9e66"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/opentelemetry-php/contrib-auto-doctrine/zipball/7df322cd9717f7b8ce86dc32b6828441ee1cd8f2",
-                "reference": "7df322cd9717f7b8ce86dc32b6828441ee1cd8f2",
+                "url": "https://api.github.com/repos/opentelemetry-php/contrib-auto-doctrine/zipball/c8a71845fe4c0fa0315ff78e57aa4631c4ec9e66",
+                "reference": "c8a71845fe4c0fa0315ff78e57aa4631c4ec9e66",
                 "shasum": ""
             },
             "require": {
@@ -2993,7 +2993,7 @@
                 "Apache-2.0"
             ],
             "description": "OpenTelemetry auto-instrumentation for Doctrine",
-            "homepage": "https://opentelemetry.io/docs/php",
+            "homepage": "https://opentelemetry.io/docs/languages/php/",
             "keywords": [
                 "doctrine",
                 "instrumentation",
@@ -3003,9 +3003,9 @@
                 "tracing"
             ],
             "support": {
-                "source": "https://github.com/opentelemetry-php/contrib-auto-doctrine/tree/0.3.1"
+                "source": "https://github.com/opentelemetry-php/contrib-auto-doctrine/tree/0.4.0"
             },
-            "time": "2025-07-05T05:16:57+00:00"
+            "time": "2026-03-24T16:33:16+00:00"
         },
         {
             "name": "open-telemetry/opentelemetry-auto-pdo",
