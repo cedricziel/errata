@@ -6564,16 +6564,16 @@
         },
         {
             "name": "symfony/lock",
-            "version": "v8.0.6",
+            "version": "v8.0.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/lock.git",
-                "reference": "4fab44738d1116eac2b75739b366d30ebb6c7f5e"
+                "reference": "ddcbabbfdf1f3fdeb48f8ddffc85289cddee59d1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/lock/zipball/4fab44738d1116eac2b75739b366d30ebb6c7f5e",
-                "reference": "4fab44738d1116eac2b75739b366d30ebb6c7f5e",
+                "url": "https://api.github.com/repos/symfony/lock/zipball/ddcbabbfdf1f3fdeb48f8ddffc85289cddee59d1",
+                "reference": "ddcbabbfdf1f3fdeb48f8ddffc85289cddee59d1",
                 "shasum": ""
             },
             "require": {
@@ -6622,7 +6622,7 @@
                 "semaphore"
             ],
             "support": {
-                "source": "https://github.com/symfony/lock/tree/v8.0.6"
+                "source": "https://github.com/symfony/lock/tree/v8.0.8"
             },
             "funding": [
                 {
@@ -6642,7 +6642,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-02-17T13:07:04+00:00"
+            "time": "2026-03-31T07:15:36+00:00"
         },
         {
             "name": "symfony/mailer",
