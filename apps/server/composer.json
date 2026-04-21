@@ -16,7 +16,7 @@
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6.1",
         "dragonmantank/cron-expression": "^3.6",
-        "easycorp/easyadmin-bundle": "^4.27.7",
+        "easycorp/easyadmin-bundle": "^5.0.6",
         "flow-php/etl": "^0.30.0",
         "flow-php/etl-adapter-parquet": "^0.30.0",
         "flow-php/filesystem-async-aws-bridge": "^0.30.0",
