@@ -35,55 +35,55 @@ return [
         'version' => '1.9.1',
     ],
     '@opentelemetry/core' => [
-        'version' => '2.6.1',
+        'version' => '2.7.1',
     ],
     '@opentelemetry/resources' => [
-        'version' => '2.6.1',
+        'version' => '2.7.1',
     ],
     '@opentelemetry/semantic-conventions' => [
         'version' => '1.40.0',
     ],
     '@opentelemetry/sdk-trace-base' => [
-        'version' => '2.6.1',
+        'version' => '2.7.1',
     ],
     '@opentelemetry/sdk-trace-web' => [
-        'version' => '2.6.1',
+        'version' => '2.7.1',
     ],
     '@opentelemetry/exporter-trace-otlp-http' => [
-        'version' => '0.214.0',
+        'version' => '0.216.0',
     ],
     '@opentelemetry/otlp-exporter-base' => [
-        'version' => '0.214.0',
+        'version' => '0.216.0',
     ],
     '@opentelemetry/otlp-exporter-base/browser-http' => [
-        'version' => '0.214.0',
+        'version' => '0.216.0',
     ],
     '@opentelemetry/otlp-transformer' => [
-        'version' => '0.214.0',
+        'version' => '0.216.0',
     ],
     'protobufjs/minimal' => [
-        'version' => '8.0.0',
+        'version' => '8.0.3',
     ],
     '@opentelemetry/instrumentation' => [
-        'version' => '0.214.0',
+        'version' => '0.216.0',
     ],
     '@opentelemetry/instrumentation-fetch' => [
-        'version' => '0.214.0',
+        'version' => '0.216.0',
     ],
     '@opentelemetry/instrumentation-document-load' => [
-        'version' => '0.59.0',
+        'version' => '0.61.0',
     ],
     '@opentelemetry/context-zone' => [
-        'version' => '2.6.1',
+        'version' => '2.7.1',
     ],
     '@opentelemetry/context-zone-peer-dep' => [
-        'version' => '2.6.1',
+        'version' => '2.7.1',
     ],
     '@opentelemetry/api-logs' => [
-        'version' => '0.214.0',
+        'version' => '0.216.0',
     ],
     '@opentelemetry/sdk-metrics' => [
-        'version' => '2.6.1',
+        'version' => '2.7.1',
     ],
     'zone.js' => [
         'version' => '0.16.1',
@@ -101,10 +101,10 @@ return [
         'version' => '1.0.2',
     ],
     '@protobufjs/inquire' => [
-        'version' => '1.1.0',
+        'version' => '1.1.1',
     ],
     '@protobufjs/utf8' => [
-        'version' => '1.1.0',
+        'version' => '1.1.1',
     ],
     '@protobufjs/pool' => [
         'version' => '1.1.0',
