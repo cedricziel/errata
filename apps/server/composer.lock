@@ -8106,16 +8106,16 @@
         },
         {
             "name": "symfony/rate-limiter",
-            "version": "v8.0.8",
+            "version": "v8.0.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/rate-limiter.git",
-                "reference": "48d80b302c58efb369d6f37a389e3c3dcaf8987a"
+                "reference": "6720f250f1e627043439d93754a555662144f883"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/rate-limiter/zipball/48d80b302c58efb369d6f37a389e3c3dcaf8987a",
-                "reference": "48d80b302c58efb369d6f37a389e3c3dcaf8987a",
+                "url": "https://api.github.com/repos/symfony/rate-limiter/zipball/6720f250f1e627043439d93754a555662144f883",
+                "reference": "6720f250f1e627043439d93754a555662144f883",
                 "shasum": ""
             },
             "require": {
@@ -8156,7 +8156,7 @@
                 "rate-limiter"
             ],
             "support": {
-                "source": "https://github.com/symfony/rate-limiter/tree/v8.0.8"
+                "source": "https://github.com/symfony/rate-limiter/tree/v8.0.9"
             },
             "funding": [
                 {
@@ -8176,7 +8176,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-03-30T15:14:47+00:00"
+            "time": "2026-04-29T15:02:55+00:00"
         },
         {
             "name": "symfony/redis-messenger",
