@@ -8424,16 +8424,16 @@
         },
         {
             "name": "symfony/scheduler",
-            "version": "v8.0.9",
+            "version": "v8.0.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/scheduler.git",
-                "reference": "d198c648959769cbb45c9bf74dc603faf3221e0b"
+                "reference": "64a4ae9af5653fcee9cbd31ad7a8d2128eec1de2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/scheduler/zipball/d198c648959769cbb45c9bf74dc603faf3221e0b",
-                "reference": "d198c648959769cbb45c9bf74dc603faf3221e0b",
+                "url": "https://api.github.com/repos/symfony/scheduler/zipball/64a4ae9af5653fcee9cbd31ad7a8d2128eec1de2",
+                "reference": "64a4ae9af5653fcee9cbd31ad7a8d2128eec1de2",
                 "shasum": ""
             },
             "require": {
@@ -8442,7 +8442,7 @@
             },
             "require-dev": {
                 "dragonmantank/cron-expression": "^3.1",
-                "symfony/cache": "^7.4|^8.0",
+                "symfony/cache": "^7.4.8|^8.0.8",
                 "symfony/console": "^7.4|^8.0",
                 "symfony/dependency-injection": "^7.4|^8.0",
                 "symfony/event-dispatcher": "^7.4|^8.0",
@@ -8485,7 +8485,7 @@
                 "scheduler"
             ],
             "support": {
-                "source": "https://github.com/symfony/scheduler/tree/v8.0.9"
+                "source": "https://github.com/symfony/scheduler/tree/v8.0.10"
             },
             "funding": [
                 {
@@ -8505,7 +8505,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-18T13:51:42+00:00"
+            "time": "2026-05-06T12:05:43+00:00"
         },
         {
             "name": "symfony/security-bundle",
