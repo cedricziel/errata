@@ -9976,16 +9976,16 @@
         },
         {
             "name": "symfony/ux-live-component",
-            "version": "v3.0.0",
+            "version": "v3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/ux-live-component.git",
-                "reference": "a65719c5aa06e2cdd957aae34a35bb4541206484"
+                "reference": "9ad6223e00922c17e26ce111c3ced31a9c2e7210"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/ux-live-component/zipball/a65719c5aa06e2cdd957aae34a35bb4541206484",
-                "reference": "a65719c5aa06e2cdd957aae34a35bb4541206484",
+                "url": "https://api.github.com/repos/symfony/ux-live-component/zipball/9ad6223e00922c17e26ce111c3ced31a9c2e7210",
+                "reference": "9ad6223e00922c17e26ce111c3ced31a9c2e7210",
                 "shasum": ""
             },
             "require": {
@@ -10053,7 +10053,7 @@
                 "twig"
             ],
             "support": {
-                "source": "https://github.com/symfony/ux-live-component/tree/v3.0.0"
+                "source": "https://github.com/symfony/ux-live-component/tree/v3.1.0"
             },
             "funding": [
                 {
@@ -10073,7 +10073,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-10T05:40:22+00:00"
+            "time": "2026-05-29T07:08:56+00:00"
         },
         {
             "name": "symfony/ux-turbo",
@@ -10177,7 +10177,7 @@
         },
         {
             "name": "symfony/ux-twig-component",
-            "version": "v2.35.0",
+            "version": "v2.36.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/ux-twig-component.git",
@@ -10242,7 +10242,7 @@
                 "twig"
             ],
             "support": {
-                "source": "https://github.com/symfony/ux-twig-component/tree/v2.35.0"
+                "source": "https://github.com/symfony/ux-twig-component/tree/v2.36.0"
             },
             "funding": [
                 {
