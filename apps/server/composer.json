@@ -61,7 +61,7 @@
         "symfony/stimulus-bundle": "^3.0",
         "symfony/string": "8.0.*",
         "symfony/translation": "8.1.*",
-        "symfony/twig-bundle": "8.0.*",
+        "symfony/twig-bundle": "8.1.*",
         "symfony/uid": "8.0.*",
         "symfony/ux-chartjs": "^3.0",
         "symfony/ux-live-component": "^3.0",

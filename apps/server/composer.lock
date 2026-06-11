@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "84532678cebe3f577ee979e0138d5932",
+    "content-hash": "a347200dc1db30c9064d90642735b780",
     "packages": [
         {
             "name": "api-platform/core",
@@ -9674,21 +9674,21 @@
         },
         {
             "name": "symfony/twig-bundle",
-            "version": "v8.0.8",
+            "version": "v8.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/twig-bundle.git",
-                "reference": "f83767b78e2580ca9fe9a2cf6fcff19cd5389bc1"
+                "reference": "b7f4a471a07b8b52174d153e4db12f46954192ed"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/twig-bundle/zipball/f83767b78e2580ca9fe9a2cf6fcff19cd5389bc1",
-                "reference": "f83767b78e2580ca9fe9a2cf6fcff19cd5389bc1",
+                "url": "https://api.github.com/repos/symfony/twig-bundle/zipball/b7f4a471a07b8b52174d153e4db12f46954192ed",
+                "reference": "b7f4a471a07b8b52174d153e4db12f46954192ed",
                 "shasum": ""
             },
             "require": {
                 "composer-runtime-api": ">=2.1",
-                "php": ">=8.4",
+                "php": ">=8.4.1",
                 "symfony/config": "^7.4|^8.0",
                 "symfony/dependency-injection": "^7.4|^8.0",
                 "symfony/http-foundation": "^7.4|^8.0",
@@ -9734,7 +9734,7 @@
             "description": "Provides a tight integration of Twig into the Symfony full-stack framework",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/twig-bundle/tree/v8.0.8"
+                "source": "https://github.com/symfony/twig-bundle/tree/v8.1.0"
             },
             "funding": [
                 {
@@ -9754,7 +9754,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-03-30T15:14:47+00:00"
+            "time": "2026-05-29T05:06:50+00:00"
         },
         {
             "name": "symfony/type-info",
