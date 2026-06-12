@@ -52,7 +52,7 @@
         "symfony/process": "8.0.*",
         "symfony/property-access": "8.0.*",
         "symfony/property-info": "8.0.*",
-        "symfony/rate-limiter": "8.0.*",
+        "symfony/rate-limiter": "8.1.*",
         "symfony/redis-messenger": "8.1.*",
         "symfony/runtime": "8.0.*",
         "symfony/scheduler": "8.0.*",
