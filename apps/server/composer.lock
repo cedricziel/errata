@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "234722873360de1d143401663672c368",
+    "content-hash": "1a6b3b52beab35df4e5d0cd44f015246",
     "packages": [
         {
             "name": "api-platform/core",
@@ -8545,20 +8545,20 @@
         },
         {
             "name": "symfony/scheduler",
-            "version": "v8.0.13",
+            "version": "v8.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/scheduler.git",
-                "reference": "d6efd1d0d6ffc8402e4c421884ac7a3d363d360c"
+                "reference": "62eda20f6b8a8d50968ec940c274ca42ad52a1e4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/scheduler/zipball/d6efd1d0d6ffc8402e4c421884ac7a3d363d360c",
-                "reference": "d6efd1d0d6ffc8402e4c421884ac7a3d363d360c",
+                "url": "https://api.github.com/repos/symfony/scheduler/zipball/62eda20f6b8a8d50968ec940c274ca42ad52a1e4",
+                "reference": "62eda20f6b8a8d50968ec940c274ca42ad52a1e4",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.4",
+                "php": ">=8.4.1",
                 "symfony/clock": "^7.4|^8.0"
             },
             "require-dev": {
@@ -8606,7 +8606,7 @@
                 "scheduler"
             ],
             "support": {
-                "source": "https://github.com/symfony/scheduler/tree/v8.0.13"
+                "source": "https://github.com/symfony/scheduler/tree/v8.1.0"
             },
             "funding": [
                 {
@@ -8626,7 +8626,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-25T06:08:44+00:00"
+            "time": "2026-05-29T05:06:50+00:00"
         },
         {
             "name": "symfony/security-bundle",
