@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f86515b71afca105603631045dd8dc19",
+    "content-hash": "84877d6b7acfbd8441eb6979f53c658e",
     "packages": [
         {
             "name": "api-platform/core",
@@ -4456,21 +4456,21 @@
         },
         {
             "name": "symfony/asset-mapper",
-            "version": "v8.0.13",
+            "version": "v8.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/asset-mapper.git",
-                "reference": "13607dd4456ca537e1cfa2ca4b0169765cc0541d"
+                "reference": "74b1b7b7019c728cb1f8672b502260e683b6374e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/asset-mapper/zipball/13607dd4456ca537e1cfa2ca4b0169765cc0541d",
-                "reference": "13607dd4456ca537e1cfa2ca4b0169765cc0541d",
+                "url": "https://api.github.com/repos/symfony/asset-mapper/zipball/74b1b7b7019c728cb1f8672b502260e683b6374e",
+                "reference": "74b1b7b7019c728cb1f8672b502260e683b6374e",
                 "shasum": ""
             },
             "require": {
                 "composer/semver": "^3.0",
-                "php": ">=8.4",
+                "php": ">=8.4.1",
                 "symfony/filesystem": "^7.4|^8.0",
                 "symfony/http-client": "^7.4|^8.0"
             },
@@ -4513,7 +4513,7 @@
             "description": "Maps directories of assets & makes them available in a public directory with versioned filenames.",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/asset-mapper/tree/v8.0.13"
+                "source": "https://github.com/symfony/asset-mapper/tree/v8.1.0"
             },
             "funding": [
                 {
@@ -4533,7 +4533,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-23T18:05:53+00:00"
+            "time": "2026-05-29T05:06:50+00:00"
         },
         {
             "name": "symfony/cache",
