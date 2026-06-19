@@ -57,7 +57,7 @@
         "symfony/runtime": "8.0.*",
         "symfony/scheduler": "8.1.*",
         "symfony/security-bundle": "8.1.*",
-        "symfony/serializer": "8.0.*",
+        "symfony/serializer": "8.1.*",
         "symfony/stimulus-bundle": "^3.0",
         "symfony/string": "8.0.*",
         "symfony/translation": "8.1.*",
