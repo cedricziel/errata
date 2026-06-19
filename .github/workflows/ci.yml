@@ -19,7 +19,7 @@ jobs:
         working-directory: apps/server
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -74,7 +74,7 @@ jobs:
       DATABASE_URL: postgresql://errata:errata@localhost:5432/errata?charset=utf8
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -116,7 +116,7 @@ jobs:
         working-directory: packages/sdk-swift
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build Swift Package
         run: swift build
@@ -129,7 +129,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build from repo root
         run: swift build
@@ -145,7 +145,7 @@ jobs:
         working-directory: apps/server
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -194,7 +194,7 @@ jobs:
             image: worker-dev
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4

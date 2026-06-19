@@ -36,7 +36,7 @@ jobs:
       DATABASE_URL: postgresql://errata:errata@localhost:5432/errata?charset=utf8
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
