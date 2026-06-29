@@ -6513,16 +6513,16 @@
         },
         {
             "name": "symfony/intl",
-            "version": "v8.1.0",
+            "version": "v8.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/intl.git",
-                "reference": "7822dffb3e2128501a1ac781db5d8217fc9caac1"
+                "reference": "e2883a541b3cf5a2daff70170a420155d97e65e4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/intl/zipball/7822dffb3e2128501a1ac781db5d8217fc9caac1",
-                "reference": "7822dffb3e2128501a1ac781db5d8217fc9caac1",
+                "url": "https://api.github.com/repos/symfony/intl/zipball/e2883a541b3cf5a2daff70170a420155d97e65e4",
+                "reference": "e2883a541b3cf5a2daff70170a420155d97e65e4",
                 "shasum": ""
             },
             "require": {
@@ -6578,7 +6578,7 @@
                 "localization"
             ],
             "support": {
-                "source": "https://github.com/symfony/intl/tree/v8.1.0"
+                "source": "https://github.com/symfony/intl/tree/v8.1.1"
             },
             "funding": [
                 {
@@ -6598,7 +6598,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-29T05:06:50+00:00"
+            "time": "2026-06-05T06:23:12+00:00"
         },
         {
             "name": "symfony/lock",
