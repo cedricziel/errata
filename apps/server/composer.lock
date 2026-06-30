@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "33413472e8ceb0f1970415d4311a5563",
+    "content-hash": "125b09f1b8080be815a5e3af05333823",
     "packages": [
         {
             "name": "api-platform/core",
@@ -6602,20 +6602,20 @@
         },
         {
             "name": "symfony/lock",
-            "version": "v8.0.9",
+            "version": "v8.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/lock.git",
-                "reference": "02e7142df3d647411fd88655d20d8ec79dafb78c"
+                "reference": "60d3c9f8c537be45d48564f1cfd0c223f1252a50"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/lock/zipball/02e7142df3d647411fd88655d20d8ec79dafb78c",
-                "reference": "02e7142df3d647411fd88655d20d8ec79dafb78c",
+                "url": "https://api.github.com/repos/symfony/lock/zipball/60d3c9f8c537be45d48564f1cfd0c223f1252a50",
+                "reference": "60d3c9f8c537be45d48564f1cfd0c223f1252a50",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.4",
+                "php": ">=8.4.1",
                 "psr/log": "^1|^2|^3"
             },
             "conflict": {
@@ -6660,7 +6660,7 @@
                 "semaphore"
             ],
             "support": {
-                "source": "https://github.com/symfony/lock/tree/v8.0.9"
+                "source": "https://github.com/symfony/lock/tree/v8.1.1"
             },
             "funding": [
                 {
@@ -6680,7 +6680,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-29T15:02:55+00:00"
+            "time": "2026-06-12T08:43:41+00:00"
         },
         {
             "name": "symfony/mailer",
