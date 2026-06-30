@@ -51,7 +51,7 @@
         "symfony/notifier": "8.1.*",
         "symfony/process": "8.1.*",
         "symfony/property-access": "8.1.*",
-        "symfony/property-info": "8.0.*",
+        "symfony/property-info": "8.1.*",
         "symfony/rate-limiter": "8.1.*",
         "symfony/redis-messenger": "8.1.*",
         "symfony/runtime": "8.1.*",
