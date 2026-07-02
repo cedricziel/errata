@@ -8307,16 +8307,16 @@
         },
         {
             "name": "symfony/redis-messenger",
-            "version": "v8.1.0",
+            "version": "v8.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/redis-messenger.git",
-                "reference": "bd9b96ddfb74c6ed109fc0c4872b904ebb294e6b"
+                "reference": "146b2cb75f31d0a7e69b2454380a95cc2f400d80"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/redis-messenger/zipball/bd9b96ddfb74c6ed109fc0c4872b904ebb294e6b",
-                "reference": "bd9b96ddfb74c6ed109fc0c4872b904ebb294e6b",
+                "url": "https://api.github.com/repos/symfony/redis-messenger/zipball/146b2cb75f31d0a7e69b2454380a95cc2f400d80",
+                "reference": "146b2cb75f31d0a7e69b2454380a95cc2f400d80",
                 "shasum": ""
             },
             "require": {
@@ -8359,7 +8359,7 @@
             "description": "Symfony Redis extension Messenger Bridge",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/redis-messenger/tree/v8.1.0"
+                "source": "https://github.com/symfony/redis-messenger/tree/v8.1.1"
             },
             "funding": [
                 {
@@ -8379,7 +8379,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-29T05:06:50+00:00"
+            "time": "2026-06-17T12:34:14+00:00"
         },
         {
             "name": "symfony/routing",
