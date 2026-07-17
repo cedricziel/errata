@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "751a6551b38cec28f66a3b25c0757761",
+    "content-hash": "9d49843db19ddd6b468b9a61d109a3ae",
     "packages": [
         {
             "name": "api-platform/core",
@@ -3137,16 +3137,16 @@
         },
         {
             "name": "open-telemetry/opentelemetry-sqlcommenter",
-            "version": "0.2.0",
+            "version": "0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/opentelemetry-php/contrib-sqlcommenter.git",
-                "reference": "2fb581c796adff8c9c4ffa5fa7f3ecf0d3630a82"
+                "reference": "887f9c360f9ef5e98810c82ebc39beac430690c4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/opentelemetry-php/contrib-sqlcommenter/zipball/2fb581c796adff8c9c4ffa5fa7f3ecf0d3630a82",
-                "reference": "2fb581c796adff8c9c4ffa5fa7f3ecf0d3630a82",
+                "url": "https://api.github.com/repos/opentelemetry-php/contrib-sqlcommenter/zipball/887f9c360f9ef5e98810c82ebc39beac430690c4",
+                "reference": "887f9c360f9ef5e98810c82ebc39beac430690c4",
                 "shasum": ""
             },
             "require": {
@@ -3188,9 +3188,9 @@
             ],
             "support": {
                 "issues": "https://github.com/opentelemetry-php/contrib-sqlcommenter/issues",
-                "source": "https://github.com/opentelemetry-php/contrib-sqlcommenter/tree/0.2.0"
+                "source": "https://github.com/opentelemetry-php/contrib-sqlcommenter/tree/0.3.0"
             },
-            "time": "2026-03-24T16:33:16+00:00"
+            "time": "2026-06-08T12:54:17+00:00"
         },
         {
             "name": "open-telemetry/sdk",
