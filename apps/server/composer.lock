@@ -3070,16 +3070,16 @@
         },
         {
             "name": "open-telemetry/opentelemetry-auto-symfony",
-            "version": "1.3.0",
+            "version": "1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/opentelemetry-php/contrib-auto-symfony.git",
-                "reference": "37159307e6f56830d8944fd8714aaad757f67aa7"
+                "reference": "030449d00e817b16d1420e97f16a29b00d96d403"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/opentelemetry-php/contrib-auto-symfony/zipball/37159307e6f56830d8944fd8714aaad757f67aa7",
-                "reference": "37159307e6f56830d8944fd8714aaad757f67aa7",
+                "url": "https://api.github.com/repos/opentelemetry-php/contrib-auto-symfony/zipball/030449d00e817b16d1420e97f16a29b00d96d403",
+                "reference": "030449d00e817b16d1420e97f16a29b00d96d403",
                 "shasum": ""
             },
             "require": {
@@ -3131,9 +3131,9 @@
                 "tracing"
             ],
             "support": {
-                "source": "https://github.com/opentelemetry-php/contrib-auto-symfony/tree/1.3.0"
+                "source": "https://github.com/opentelemetry-php/contrib-auto-symfony/tree/1.4.0"
             },
-            "time": "2026-03-31T18:53:09+00:00"
+            "time": "2026-07-09T20:33:56+00:00"
         },
         {
             "name": "open-telemetry/opentelemetry-sqlcommenter",
