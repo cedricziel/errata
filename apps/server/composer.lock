@@ -4542,16 +4542,16 @@
         },
         {
             "name": "symfony/cache",
-            "version": "v8.1.1",
+            "version": "v8.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/cache.git",
-                "reference": "c14decc1b0755b1e8ab6babeef56e1880348e817"
+                "reference": "8ce793736c9b178066c6110335c8647103919567"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/cache/zipball/c14decc1b0755b1e8ab6babeef56e1880348e817",
-                "reference": "c14decc1b0755b1e8ab6babeef56e1880348e817",
+                "url": "https://api.github.com/repos/symfony/cache/zipball/8ce793736c9b178066c6110335c8647103919567",
+                "reference": "8ce793736c9b178066c6110335c8647103919567",
                 "shasum": ""
             },
             "require": {
@@ -4617,7 +4617,7 @@
                 "psr6"
             ],
             "support": {
-                "source": "https://github.com/symfony/cache/tree/v8.1.1"
+                "source": "https://github.com/symfony/cache/tree/v8.1.2"
             },
             "funding": [
                 {
@@ -4637,7 +4637,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-06-17T15:04:37+00:00"
+            "time": "2026-07-29T04:09:39+00:00"
         },
         {
             "name": "symfony/cache-contracts",
@@ -8390,16 +8390,16 @@
         },
         {
             "name": "symfony/routing",
-            "version": "v8.1.0",
+            "version": "v8.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/routing.git",
-                "reference": "fe0bfec72c8a806109fb9c3a5f2b898fe0c76eb3"
+                "reference": "1058d4e13bb81dd9a6f7565686df7e13b880cdbd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/routing/zipball/fe0bfec72c8a806109fb9c3a5f2b898fe0c76eb3",
-                "reference": "fe0bfec72c8a806109fb9c3a5f2b898fe0c76eb3",
+                "url": "https://api.github.com/repos/symfony/routing/zipball/1058d4e13bb81dd9a6f7565686df7e13b880cdbd",
+                "reference": "1058d4e13bb81dd9a6f7565686df7e13b880cdbd",
                 "shasum": ""
             },
             "require": {
@@ -8446,7 +8446,7 @@
                 "url"
             ],
             "support": {
-                "source": "https://github.com/symfony/routing/tree/v8.1.0"
+                "source": "https://github.com/symfony/routing/tree/v8.1.2"
             },
             "funding": [
                 {
@@ -8466,7 +8466,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-29T05:06:50+00:00"
+            "time": "2026-07-22T15:42:13+00:00"
         },
         {
             "name": "symfony/runtime",
@@ -9576,22 +9576,22 @@
         },
         {
             "name": "symfony/twig-bridge",
-            "version": "v8.1.1",
+            "version": "v8.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/twig-bridge.git",
-                "reference": "471e3b9537f514664ab8595668cd34c65cfa5d93"
+                "reference": "44202745eca08074fab1edcf47678b6ee9f40fa5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/twig-bridge/zipball/471e3b9537f514664ab8595668cd34c65cfa5d93",
-                "reference": "471e3b9537f514664ab8595668cd34c65cfa5d93",
+                "url": "https://api.github.com/repos/symfony/twig-bridge/zipball/44202745eca08074fab1edcf47678b6ee9f40fa5",
+                "reference": "44202745eca08074fab1edcf47678b6ee9f40fa5",
                 "shasum": ""
             },
             "require": {
                 "php": ">=8.4.1",
                 "symfony/translation-contracts": "^2.5|^3",
-                "twig/twig": "^3.25"
+                "twig/twig": "^3.25|^4.0"
             },
             "conflict": {
                 "phpdocumentor/reflection-docblock": "<5.2|>=7",
@@ -9660,7 +9660,7 @@
             "description": "Provides integration for Twig with various Symfony components",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/twig-bridge/tree/v8.1.1"
+                "source": "https://github.com/symfony/twig-bridge/tree/v8.1.2"
             },
             "funding": [
                 {
@@ -9680,20 +9680,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-06-17T15:04:37+00:00"
+            "time": "2026-07-23T05:14:16+00:00"
         },
         {
             "name": "symfony/twig-bundle",
-            "version": "v8.1.0",
+            "version": "v8.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/twig-bundle.git",
-                "reference": "b7f4a471a07b8b52174d153e4db12f46954192ed"
+                "reference": "a70b67c2cd990d05e544ea5fab361aa0e69fab3a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/twig-bundle/zipball/b7f4a471a07b8b52174d153e4db12f46954192ed",
-                "reference": "b7f4a471a07b8b52174d153e4db12f46954192ed",
+                "url": "https://api.github.com/repos/symfony/twig-bundle/zipball/a70b67c2cd990d05e544ea5fab361aa0e69fab3a",
+                "reference": "a70b67c2cd990d05e544ea5fab361aa0e69fab3a",
                 "shasum": ""
             },
             "require": {
@@ -9744,7 +9744,7 @@
             "description": "Provides a tight integration of Twig into the Symfony full-stack framework",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/twig-bundle/tree/v8.1.0"
+                "source": "https://github.com/symfony/twig-bundle/tree/v8.1.2"
             },
             "funding": [
                 {
@@ -9764,7 +9764,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-29T05:06:50+00:00"
+            "time": "2026-06-05T06:23:12+00:00"
         },
         {
             "name": "symfony/type-info",
@@ -14904,16 +14904,16 @@
         },
         {
             "name": "symfony/web-profiler-bundle",
-            "version": "v8.1.1",
+            "version": "v8.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/web-profiler-bundle.git",
-                "reference": "eb4cf71d8fc496d790ec85b1b684a7ac30d57a96"
+                "reference": "4fefaa6da65846e2c5cd242c9f8e2676465e233b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/web-profiler-bundle/zipball/eb4cf71d8fc496d790ec85b1b684a7ac30d57a96",
-                "reference": "eb4cf71d8fc496d790ec85b1b684a7ac30d57a96",
+                "url": "https://api.github.com/repos/symfony/web-profiler-bundle/zipball/4fefaa6da65846e2c5cd242c9f8e2676465e233b",
+                "reference": "4fefaa6da65846e2c5cd242c9f8e2676465e233b",
                 "shasum": ""
             },
             "require": {
@@ -14965,7 +14965,7 @@
                 "dev"
             ],
             "support": {
-                "source": "https://github.com/symfony/web-profiler-bundle/tree/v8.1.1"
+                "source": "https://github.com/symfony/web-profiler-bundle/tree/v8.1.2"
             },
             "funding": [
                 {
@@ -14985,7 +14985,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-06-05T06:23:12+00:00"
+            "time": "2026-07-09T17:23:48+00:00"
         },
         {
             "name": "theseer/tokenizer",
